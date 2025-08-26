@@ -5,7 +5,7 @@
     "lib": ["ES2020"],
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -14,8 +14,13 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "@ingressohub/entities": ["packages/entities/src"],
-      "@ingressohub/entities/*": ["packages/entities/src/*"]
+      "@ingressohub/entities": ["../../packages/entities/src"],
+      "@ingressohub/entities/*": ["../../packages/entities/src/*"]
     }
-  }
+  },
+  "references": [
+    { "path": "../../packages/entities" }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

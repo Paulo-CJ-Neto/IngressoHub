@@ -16,7 +16,7 @@ const mockEvents: Event[] = [
   {
     id: '1',
     name: 'Show de Rock In Rio',
-    date: '2024-12-15T20:00:00',
+    date: new Date('2024-12-15T20:00:00').toISOString(),
     location: 'Parque Olímpico, Rio de Janeiro',
     price: 150.00,
     max_tickets: 1000,
@@ -28,7 +28,7 @@ const mockEvents: Event[] = [
   {
     id: '2',
     name: 'Festival de Música Eletrônica',
-    date: '2024-11-20T22:00:00',
+    date: new Date('2024-11-20T22:00:00').toISOString(),
     location: 'Autódromo de Interlagos, São Paulo',
     price: 200.00,
     max_tickets: 500,
@@ -40,7 +40,7 @@ const mockEvents: Event[] = [
   {
     id: '3',
     name: 'Teatro: Romeu e Julieta',
-    date: '2024-10-25T19:30:00',
+    date: new Date('2024-10-25T19:30:00').toISOString(),
     location: 'Teatro Municipal, São Paulo',
     price: 80.00,
     max_tickets: 200,
@@ -52,7 +52,7 @@ const mockEvents: Event[] = [
   {
     id: '4',
     name: 'Stand-up Comedy Night',
-    date: '2024-11-10T21:00:00',
+    date: new Date('2024-11-10T21:00:00').toISOString(),
     location: 'Casa de Comédia, Rio de Janeiro',
     price: 60.00,
     max_tickets: 150,

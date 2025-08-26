@@ -1,148 +1,99 @@
-# IngressoHub - React Native App
+# ingressohub Monorepo
 
-Um aplicativo React Native para compra de ingressos de eventos, convertido do React web.
+Este é um monorepo para o projeto ingressohub, organizado com a seguinte estrutura:
 
-## 🚀 Funcionalidades
+## 📁 Estrutura do Projeto
 
-- **Listagem de Eventos**: Visualize todos os eventos disponíveis
-- **Detalhes do Evento**: Informações completas sobre cada evento
-- **Sistema de Compra**: Interface para finalizar compra de ingressos
-- **Autenticação**: Login com Google (simulado)
-- **Geração de Ingressos**: QR Code único para cada ingresso
-- **Pagamento PIX**: Instruções de pagamento integradas
-
-## 📱 Telas Implementadas
-
-1. **Home** - Lista de eventos disponíveis
-2. **EventDetails** - Detalhes completos do evento
-3. **Purchase** - Finalização da compra
-4. **TicketSuccess** - Confirmação e detalhes do ingresso
-
-## 🛠️ Tecnologias Utilizadas
-
-- **React Native** - Framework principal
-- **Expo** - Plataforma de desenvolvimento
-- **React Navigation** - Navegação entre telas
-- **TypeScript** - Tipagem estática
-- **date-fns** - Manipulação de datas
-- **Expo Vector Icons** - Ícones
-
-## 📦 Instalação
-
-1. Clone o repositório:
-```bash
-git clone <repository-url>
-cd IngressoHub
+```
+ingressohub-monorepo/
+├── apps/
+│   ├── mobile/          # Aplicação React Native (Expo)
+│   └── api/             # Backend Node.js com Express
+├── packages/
+│   └── entities/        # Entidades compartilhadas (Event, Ticket, User)
+├── package.json         # Package.json raiz com workspaces
+└── tsconfig.json        # Configuração TypeScript raiz
 ```
 
-2. Instale as dependências:
+## 🚀 Scripts Disponíveis
+
+### Desenvolvimento
+- `npm run dev:mobile` - Inicia o app React Native
+- `npm run dev:api` - Inicia o backend em modo desenvolvimento
+
+### Build
+- `npm run build` - Builda todos os pacotes
+- `npm run build:mobile` - Builda apenas o mobile
+- `npm run build:api` - Builda apenas a API
+- `npm run build:entities` - Builda apenas as entidades
+
+### Utilitários
+- `npm run install:all` - Instala dependências em todos os workspaces
+- `npm run clean` - Limpa builds em todos os workspaces
+
+## 🛠️ Configuração
+
+### Pré-requisitos
+- Node.js 18+
+- npm 9+
+- Expo CLI (para desenvolvimento mobile)
+
+### Instalação
 ```bash
+# Instalar dependências raiz
 npm install
+
+# Instalar dependências em todos os workspaces
+npm run install:all
 ```
 
-3. Execute o projeto:
+## 📱 Mobile App
+
+O app mobile está localizado em `apps/mobile/` e usa:
+- React Native com Expo
+- TypeScript
+- React Navigation
+- React Native Paper para UI
+
+### Executar
 ```bash
-npm start
+npm run dev:mobile
 ```
 
-## 🏗️ Estrutura do Projeto
+## 🔌 API Backend
 
-```
-src/
-├── components/          # Componentes reutilizáveis
-├── entities/           # Entidades e serviços
-│   ├── Event.ts       # Evento e EventService
-│   ├── Ticket.ts      # Ingresso e TicketService
-│   └── User.ts        # Usuário e UserService
-├── navigation/         # Configuração de navegação
-├── screens/           # Telas do aplicativo
-│   ├── Home.tsx
-│   ├── EventDetails.tsx
-│   ├── Purchase.tsx
-│   └── TicketSuccess.tsx
-└── utils/             # Utilitários
+A API está localizada em `apps/api/` e usa:
+- Node.js com Express
+- TypeScript
+- CORS e Helmet para segurança
+- Rota `/health` para health check
+- Rota `/api/events` como exemplo
+
+### Executar
+```bash
+npm run dev:api
 ```
 
-## 🔄 Fluxo de Navegação
+## 📦 Pacote Entities
 
-1. **Home** → **EventDetails** (ao clicar em um evento)
-2. **EventDetails** → **Purchase** (ao clicar em "Comprar Ingresso")
-3. **Purchase** → **TicketSuccess** (após finalizar compra)
-4. **TicketSuccess** → **Home** (ao clicar em "Voltar ao Início")
+O pacote `packages/entities/` contém:
+- `Event.ts` - Entidade de evento
+- `Ticket.ts` - Entidade de ingresso
+- `User.ts` - Entidade de usuário
 
-## 📊 Entidades
+Este pacote é compartilhado entre mobile e API, garantindo consistência de tipos.
 
-### Event
-- `id`: Identificador único
-- `name`: Nome do evento
-- `date`: Data e hora
-- `location`: Local do evento
-- `price`: Preço do ingresso
-- `max_tickets`: Número máximo de ingressos
-- `sold_tickets`: Ingressos vendidos
-- `image_url`: URL da imagem
-- `description`: Descrição do evento
-- `status`: Status do evento (active/inactive)
+## 🔗 TypeScript Project References
 
-### Ticket
-- `id`: Identificador único
-- `event_id`: ID do evento
-- `buyer_name`: Nome do comprador
-- `buyer_cpf`: CPF do comprador
-- `buyer_email`: Email do comprador
-- `quantity`: Quantidade de ingressos
-- `total_price`: Preço total
-- `qr_code`: Código QR único
-- `status`: Status do ingresso (valid/used/cancelled)
-- `created_at`: Data de criação
+O projeto usa TypeScript Project References para:
+- Compilação incremental
+- Verificação de tipos entre projetos
+- Importações com paths configurados
 
-### User
-- `id`: Identificador único
-- `email`: Email do usuário
-- `full_name`: Nome completo
-- `avatar_url`: URL do avatar
-- `created_at`: Data de criação
+## 📋 Próximos Passos
 
-## 🎨 Design System
-
-O aplicativo utiliza um design system consistente com:
-
-- **Cores principais**: Roxo (#8B5CF6) e Índigo (#6366F1)
-- **Tipografia**: Sistema de fontes hierárquico
-- **Componentes**: Cards, botões, inputs padronizados
-- **Espaçamento**: Sistema de grid consistente
-
-## 🔧 Configuração
-
-### Babel
-O projeto utiliza `babel-plugin-module-resolver` para aliases de importação:
-- `@/` aponta para `src/`
-
-### TypeScript
-Configurado com path mapping para melhor organização de imports.
-
-## 📱 Executando no Dispositivo
-
-1. Instale o Expo Go no seu dispositivo
-2. Execute `npm start`
-3. Escaneie o QR Code com o Expo Go
-
-## 🧪 Dados de Teste
-
-O aplicativo utiliza dados mockados para demonstração:
-- 4 eventos pré-cadastrados
-- Sistema de login simulado
-- Geração de QR Codes únicos
-
-## 🔮 Próximas Funcionalidades
-
-- [ ] Implementar backend real
-- [ ] Sistema de notificações push
-- [ ] Histórico de compras
-- [ ] Avaliações de eventos
-- [ ] Sistema de favoritos
-- [ ] Compartilhamento de eventos
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT.
+1. Implementar autenticação na API
+2. Adicionar banco de dados
+3. Implementar funcionalidades de CRUD
+4. Adicionar testes unitários
+5. Configurar CI/CD

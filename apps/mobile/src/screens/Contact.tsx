@@ -25,9 +25,9 @@ export default function Contact() {
       icon: 'mail-outline' as const,
       title: 'E-mail',
       description: 'Envie sua dúvida por e-mail',
-      contact: 'contato@ticketwave.com.br',
+      contact: 'contato@ingressohub.com.br',
       action: 'Enviar e-mail',
-      href: 'mailto:contato@ticketwave.com.br',
+      href: 'mailto:contato@ingressohub.com.br',
       color: '#0EA5E9',
     },
     {

@@ -16,7 +16,7 @@ import { ptBR } from 'date-fns/locale';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Event, EventService } from '../entities/Event';
+import { Event, EventService } from '../../../../packages/entities/src/Event';
 import { RootDrawerParamList } from '../navigation';
 import { Card, CardContent } from '../components/Card';
 import { Badge } from '../components/Badge';
