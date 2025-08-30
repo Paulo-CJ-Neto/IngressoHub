@@ -10,21 +10,34 @@
     "db:test": "ts-node src/db/test-connection.ts",
     "db:examples": "ts-node src/db/examples/usage-examples.ts",
     "db:user-ticket": "ts-node src/db/examples/user-ticket-examples.ts",
-    "test:routes": "ts-node src/routes/test-routes.ts"
+    "test:routes": "ts-node src/routes/test-routes.ts",
+    "db:populate": "ts-node src/scripts/populate-database.ts",
+    "db:clear": "ts-node src/scripts/clear-database.ts",
+    "db:reset": "ts-node src/scripts/reset-and-populate.ts",
+    "db:examples-scripts": "ts-node src/scripts/database-examples.ts",
+    "test:integration": "ts-node src/scripts/test-integration.ts",
+    "test:quick": "ts-node src/scripts/quick-test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/lib-dynamodb": "^3.0.0",
     "@ingressohub/entities": "*",
+    "@types/bcrypt": "^6.0.0",
+    "axios": "^1.11.0",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^4.18.2",
-    "helmet": "^7.1.0"
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.10.0",
+    "@types/qrcode": "^1.5.5",
     "rimraf": "^5.0.0",
     "ts-node": "^10.9.0",
     "ts-node-dev": "^2.0.0",

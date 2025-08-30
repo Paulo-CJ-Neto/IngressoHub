@@ -14,8 +14,8 @@ import { RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { TicketService } from '../entities/Ticket';
-import { Ticket } from '../entities/Ticket';
+import { TicketService } from '@ingressohub/entities';
+import { Ticket } from '@ingressohub/entities';
 import { RootStackParamList } from '../navigation';
 
 const { width } = Dimensions.get('window');

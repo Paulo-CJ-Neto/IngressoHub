@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,11 +16,14 @@ import { ptBR } from 'date-fns/locale';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { Event, EventService } from '../entities/Event';
+import { Event } from '@ingressohub/entities';
+import { eventsService } from '../services';
 import { Card, CardContent } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { RootStackParamList } from '../navigation';
+import { RootStackParamList, RootDrawerParamList } from '../navigation';
+import { useAuth } from '../context/AuthContext';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
 
 const { width } = Dimensions.get('window');
 
@@ -28,9 +32,11 @@ type EventDetailsRouteProp = RouteProp<RootStackParamList, 'EventDetails'>;
 
 export default function EventDetails() {
   const navigation = useNavigation<EventDetailsNavigationProp>();
+  const drawerNavigation = useNavigation<DrawerNavigationProp<RootDrawerParamList>>();
   const route = useRoute<EventDetailsRouteProp>();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadEvent();
@@ -45,15 +51,15 @@ export default function EventDetails() {
     }
 
     try {
-      const events = await EventService.filter({ id: eventId });
-      if (events.length > 0) {
-        setEvent(events[0]);
-      } else {
-        navigation.navigate('Home');
-      }
+      const eventData = await eventsService.getEventById(eventId);
+      setEvent(eventData);
     } catch (error) {
       console.error('Erro ao carregar evento:', error);
-      navigation.navigate('Home');
+      Alert.alert(
+        'Erro',
+        'Não foi possível carregar os detalhes do evento.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
+      );
     }
     setLoading(false);
   };
@@ -221,7 +227,21 @@ export default function EventDetails() {
                 <Button
                   disabled={getAvailableTickets() === 0}
                   style={styles.purchaseButton}
-                  onPress={() => navigation.navigate('Purchase', { eventId: event.id })}
+                  onPress={() => {
+                    if (!user) {
+                      Alert.alert(
+                        'Entrar ou Cadastrar',
+                        'Você precisa estar logado para comprar. Deseja fazer login ou cadastrar-se?',
+                        [
+                          { text: 'Cancelar', style: 'cancel' },
+                          { text: 'Login', onPress: () => drawerNavigation.navigate('Login') },
+                          { text: 'Cadastro', onPress: () => drawerNavigation.navigate('Register') },
+                        ]
+                      );
+                      return;
+                    }
+                    navigation.navigate('Purchase', { eventId: event.id });
+                  }}
                 >
                   <Text style={styles.purchaseButtonText}>
                     {getAvailableTickets() === 0 ? 'Ingressos Esgotados' : 'Comprar Ingresso'}

@@ -7,8 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:mobile": "cd apps/mobile && npm start",
+    "dev:mobile": "cd apps/mobile && npx expo start -c",
     "dev:api": "cd apps/api && npm run dev",
+    "install:api": "cd apps/api && npm i",
+    "install:mobile": "cd apps/mobile && npm i",
     "build": "npm run build --workspaces",
     "build:mobile": "cd apps/mobile && npm run build",
     "build:api": "cd apps/api && npm run build",

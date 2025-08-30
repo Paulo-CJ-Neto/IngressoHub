@@ -11,8 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, CardContent } from '../components/Card';
 import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
-import { Ticket, TicketService } from '../entities/Ticket';
-import { Event, EventService } from '../entities/Event';
+import { Ticket, Event } from '@ingressohub/entities';
+import { ticketsService, eventsService } from '../services';
 
 export default function ValidateTicket() {
   const navigation = useNavigation<DrawerNavigationProp<RootDrawerParamList>>();
@@ -32,20 +32,12 @@ export default function ValidateTicket() {
     setValidationResult(null);
 
     try {
-      const found = await TicketService.findByQrCode(qrCode.trim());
-      if (!found) {
-        setValidationResult({ valid: false, message: 'Ingresso não encontrado', details: 'Código QR inválido ou inexistente' });
-        setTicket(null);
-        setEvent(null);
-        setValidating(false);
-        return;
-      }
-
+      const found = await ticketsService.getTicketByQrCode(qrCode.trim());
       setTicket(found);
 
       // Load event
-      const events = await EventService.filter({ id: found.event_id });
-      if (events.length > 0) setEvent(events[0]);
+      const eventData = await eventsService.getEventById(found.event_id);
+      setEvent(eventData);
 
       if (found.status === 'used') {
         setValidationResult({
@@ -66,20 +58,21 @@ export default function ValidateTicket() {
       }
 
       // Check event time window (assume 4h duration)
-      const eventDate = events[0] ? new Date(events[0].date) : null;
-      if (eventDate) {
-        const now = new Date();
-        const eventEnd = new Date(eventDate.getTime() + 4 * 60 * 60 * 1000);
-        if (now > eventEnd) {
-          setValidationResult({ valid: false, message: 'Evento já finalizado', details: 'Evento já terminou' });
-          setValidating(false);
-          return;
-        }
+      const eventDate = new Date(eventData.date);
+      const now = new Date();
+      const eventEnd = new Date(eventDate.getTime() + 4 * 60 * 60 * 1000);
+      if (now > eventEnd) {
+        setValidationResult({ valid: false, message: 'Evento já finalizado', details: 'Evento já terminou' });
+        setValidating(false);
+        return;
       }
 
       setValidationResult({ valid: true, message: 'Ingresso válido!', details: 'Entrada liberada' });
-    } catch (e) {
-      setValidationResult({ valid: false, message: 'Erro na validação', details: 'Tente novamente em instantes' });
+    } catch (error) {
+      console.error('Erro na validação:', error);
+      setValidationResult({ valid: false, message: 'Ingresso não encontrado', details: 'Código QR inválido ou inexistente' });
+      setTicket(null);
+      setEvent(null);
     }
     setValidating(false);
   };
@@ -87,11 +80,11 @@ export default function ValidateTicket() {
   const markTicketAsUsed = async () => {
     if (!ticket || !validationResult?.valid) return;
     try {
-      const usedAt = new Date().toISOString();
-      const updated = await TicketService.update(ticket.id, { status: 'used', used_at: usedAt });
+      const updated = await ticketsService.validateTicket(ticket.id);
       setTicket(updated);
       setValidationResult({ valid: true, message: 'Ingresso utilizado!', details: 'Entrada confirmada com sucesso' });
-    } catch (e) {
+    } catch (error) {
+      console.error('Erro ao confirmar entrada:', error);
       Alert.alert('Erro', 'Erro ao confirmar entrada');
     }
   };

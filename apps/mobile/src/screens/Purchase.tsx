@@ -14,17 +14,16 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { EventService } from '../entities/Event';
-import { TicketService } from '../entities/Ticket';
-import { UserService } from '../entities/User';
-import { Event } from '../entities/Event';
-import { User } from '../entities/User';
-import { RootStackParamList } from '../navigation';
+import { Event } from '@ingressohub/entities';
+import { eventsService, ticketsService } from '../services';
+import { RootStackParamList, RootDrawerParamList } from '../navigation';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -41,14 +40,26 @@ export default function Purchase() {
   });
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit' | 'debit'>('pix'); // Atualizado para suportar múltiplos métodos
+  const { user } = useAuth();
   
   const navigation = useNavigation<PurchaseNavigationProp>();
+  const drawerNavigation = useNavigation<DrawerNavigationProp<RootDrawerParamList>>();
   const route = useRoute<PurchaseRouteProp>();
 
   useEffect(() => {
     loadEventAndUser();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setBuyerInfo(prev => ({
+        ...prev,
+        name: user.full_name || prev.name,
+        email: user.email || prev.email
+      }));
+    }
+  }, [user]);
 
   const loadEventAndUser = async () => {
     const eventId = route.params?.eventId;
@@ -60,46 +71,26 @@ export default function Purchase() {
 
     try {
       // Load event
-      const events = await EventService.filter({ id: eventId });
-      if (events.length === 0) {
-        navigation.goBack();
-        return;
-      }
-      setEvent(events[0]);
-
-      // Check if user is logged in
-      try {
-        const currentUser = await UserService.me();
-        setUser(currentUser);
+      const eventData = await eventsService.getEventById(eventId);
+      setEvent(eventData);
+      // Se houver usuário autenticado, pré-preencher campos
+      if (user) {
         setBuyerInfo(prev => ({
           ...prev,
-          name: currentUser.full_name || '',
-          email: currentUser.email || ''
+          name: user.full_name || '',
+          email: user.email || ''
         }));
-      } catch (error) {
-        // User not logged in, that's fine
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+      Alert.alert('Erro', 'Não foi possível carregar os dados do evento.');
       navigation.goBack();
     }
     setLoading(false);
   };
 
-  const handleLogin = async () => {
-    try {
-      await UserService.loginWithRedirect();
-      // Reload user data
-      const currentUser = await UserService.me();
-      setUser(currentUser);
-      setBuyerInfo(prev => ({
-        ...prev,
-        name: currentUser.full_name || '',
-        email: currentUser.email || ''
-      }));
-    } catch (error) {
-      Alert.alert('Erro', 'Falha ao fazer login');
-    }
+  const handleLogin = () => {
+    drawerNavigation.navigate('Login');
   };
 
   const validateCPF = (cpf: string) => {
@@ -129,11 +120,23 @@ export default function Purchase() {
 
     if (!event) return;
 
+    // Se o método de pagamento for PIX, navegar para a tela de pagamento PIX
+    if (paymentMethod === 'pix') {
+      // Simular dados do backend (em produção, isso viria do backend)
+      const pixData = {
+        qrCode: 'qr_code_gerado_pelo_backend',
+        pixCode: '00020126580014br.gov.bcb.pix0136123e4567-e89b-12d3-a456-426614174000520400005303986540510.005802BR5913Nome do Evento6008Local do Evento62070503***6304ABCD',
+        amount: event.price * quantity,
+        eventName: event.name
+      };
+      
+      navigation.navigate('PixPayment', pixData);
+      return;
+    }
+
+    // Para outros métodos de pagamento (futuro)
     setProcessing(true);
     try {
-      // Generate unique QR code
-      const qrCode = `TICKET_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
       const ticketData = {
         event_id: event.id,
         buyer_name: buyerInfo.name,
@@ -141,19 +144,13 @@ export default function Purchase() {
         buyer_email: buyerInfo.email,
         quantity: quantity,
         total_price: event.price * quantity,
-        qr_code: qrCode,
         status: 'valid' as const
       };
 
-      await TicketService.create(ticketData);
+      const ticket = await ticketsService.createTicket(ticketData);
       
-      // Update event sold tickets count
-      await EventService.update(event.id, {
-        sold_tickets: (event.sold_tickets || 0) + quantity
-      });
-
       // Navigate to success page with ticket info
-      navigation.navigate('TicketSuccess', { qrCode });
+      navigation.navigate('TicketSuccess', { qrCode: ticket.qr_code });
     } catch (error) {
       console.error("Erro ao processar compra:", error);
       Alert.alert('Erro', 'Erro ao processar compra. Tente novamente.');
@@ -325,14 +322,113 @@ export default function Purchase() {
                 />
               </View>
 
+              {/* Payment Method Selector */}
+              <View style={styles.paymentMethodContainer}>
+                <Text style={styles.paymentMethodLabel}>Forma de Pagamento *</Text>
+                
+                <View style={styles.paymentMethodCard}>
+                  <TouchableOpacity
+                    style={[styles.paymentOption, paymentMethod === 'pix' && styles.paymentOptionSelected]}
+                    onPress={() => setPaymentMethod('pix')}
+                  >
+                    <View style={styles.paymentOptionContent}>
+                      <MaterialCommunityIcons 
+                        name="qrcode-scan" 
+                        size={24} 
+                        color={paymentMethod === 'pix' ? '#8B5CF6' : '#9CA3AF'} 
+                      />
+                      <View style={styles.paymentOptionText}>
+                        <Text style={[styles.paymentOptionTitle, paymentMethod === 'pix' && styles.paymentOptionTitleSelected]}>
+                          PIX
+                        </Text>
+                        <Text style={[styles.paymentOptionSubtitle, paymentMethod === 'pix' ? styles.paymentOptionSubtitleSelected : styles.paymentOptionSubtitleDisabled]}>
+                          Pagamento instantâneo
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[styles.radioButton, paymentMethod === 'pix' && styles.radioButtonSelected]}>
+                      {paymentMethod === 'pix' && <View style={styles.radioButtonInner} />}
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Credit Card Option */}
+                  <TouchableOpacity
+                    style={[styles.paymentOption, paymentMethod === 'credit' && styles.paymentOptionSelected]}
+                    onPress={() => setPaymentMethod('credit')}
+                    disabled={true}
+                  >
+                    <View style={styles.paymentOptionContent}>
+                      <MaterialCommunityIcons 
+                        name="credit-card" 
+                        size={24} 
+                        color={paymentMethod === 'credit' ? '#8B5CF6' : '#9CA3AF'} 
+                      />
+                      <View style={styles.paymentOptionText}>
+                        <Text style={[styles.paymentOptionTitle, paymentMethod === 'credit' && styles.paymentOptionTitleSelected]}>
+                          Cartão de Crédito
+                        </Text>
+                        <Text style={[styles.paymentOptionSubtitle, paymentMethod === 'credit' ? styles.paymentOptionSubtitleSelected : styles.paymentOptionSubtitleDisabled]}>
+                          Em breve
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[styles.radioButtonDisabled, paymentMethod === 'credit' && styles.radioButtonSelected]}>
+                      {paymentMethod === 'credit' && <View style={styles.radioButtonInner} />}
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Debit Card Option */}
+                  <TouchableOpacity
+                    style={[styles.paymentOption, paymentMethod === 'debit' && styles.paymentOptionSelected]}
+                    onPress={() => setPaymentMethod('debit')}
+                    disabled={true}
+                  >
+                    <View style={styles.paymentOptionContent}>
+                      <MaterialCommunityIcons 
+                        name="credit-card-outline" 
+                        size={24} 
+                        color={paymentMethod === 'debit' ? '#8B5CF6' : '#9CA3AF'} 
+                      />
+                      <View style={styles.paymentOptionText}>
+                        <Text style={[styles.paymentOptionTitle, paymentMethod === 'debit' && styles.paymentOptionTitleSelected]}>
+                          Cartão de Débito
+                        </Text>
+                        <Text style={[styles.paymentOptionSubtitle, paymentMethod === 'debit' ? styles.paymentOptionSubtitleSelected : styles.paymentOptionSubtitleDisabled]}>
+                          Em breve
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[styles.radioButtonDisabled, paymentMethod === 'debit' && styles.radioButtonSelected]}>
+                      {paymentMethod === 'debit' && <View style={styles.radioButtonInner} />}
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Payment Limitation Notice */}
+                <View style={[styles.paymentNotice, { backgroundColor: '#FEF9C3', borderColor: '#FACC15' }]}>
+                  <MaterialCommunityIcons name="alert-circle" size={20} color="#F59E42" />
+                  <Text style={[styles.paymentNoticeText, { color: '#B45309' }]}>
+                    No momento, só temos a opção de pagamento via PIX disponível. Não é possível pagar com cartão de crédito ou débito.
+                  </Text>
+                </View>
+              </View>
+
               <View style={styles.paymentInfo}>
                 <View style={styles.paymentHeader}>
-                  <MaterialCommunityIcons name="credit-card" size={20} color="#2563EB" />
-                  <Text style={styles.paymentTitle}>Pagamento via PIX</Text>
+                  <MaterialCommunityIcons 
+                    name={paymentMethod === 'pix' ? 'qrcode-scan' : 'credit-card'} 
+                    size={20} 
+                    color={paymentMethod === 'pix' ? '#8B5CF6' : '#2563EB'} 
+                  />
+                  <Text style={styles.paymentTitle}>
+                    Pagamento via {paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'credit' ? 'Cartão de Crédito' : 'Cartão de Débito'}
+                  </Text>
                 </View>
                 <Text style={styles.paymentText}>
-                  Após confirmar a compra, você receberá as instruções de pagamento via PIX
-                  e seu ingresso será liberado automaticamente.
+                  {paymentMethod === 'pix' 
+                    ? 'Após confirmar a compra, você receberá as instruções de pagamento via PIX e seu ingresso será liberado automaticamente.'
+                    : 'Após confirmar a compra, você será redirecionado para a tela de pagamento seguro.'
+                  }
                 </Text>
               </View>
 
@@ -628,6 +724,112 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     color: '#9CA3AF',
   },
+  paymentMethodContainer: {
+    marginBottom: 20,
+  },
+  paymentMethodLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  paymentMethodCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 12,
+  },
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  paymentOptionSelected: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  paymentOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paymentOptionText: {
+    marginLeft: 12,
+  },
+  paymentOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  paymentOptionTitleSelected: {
+    color: '#8B5CF6',
+  },
+  paymentOptionSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  paymentOptionSubtitleSelected: {
+    color: '#8B5CF6',
+  },
+  paymentOptionSubtitleDisabled: {
+    color: '#9CA3AF',
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#8B5CF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonDisabled: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#9CA3AF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    backgroundColor: '#8B5CF6',
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  paymentOptionDisabled: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  paymentNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  paymentNoticeText: {
+    marginLeft: 8,
+    marginRight: 8,
+    fontSize: 13,
+    color: '#065F46',
+    lineHeight: 18,
+  },
   paymentInfo: {
     backgroundColor: '#EFF6FF',
     padding: 16,
@@ -672,5 +874,11 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  radioButtonInnerDisabled: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#9CA3AF',
   },
 });

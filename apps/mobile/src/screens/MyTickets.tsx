@@ -9,19 +9,22 @@ import {
   StyleSheet,
   StyleProp,
   ViewStyle,
+  Alert,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import QRCode from 'react-native-qrcode-svg';
 
 import { Card, CardContent } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Event, EventService } from '../entities/Event';
-import { Ticket, TicketService } from '../entities/Ticket';
-import { User, UserService } from '../entities/User';
+import { Event, Ticket, User } from '@ingressohub/entities';
+import { eventsService, ticketsService, usersService } from '../services';
+import { useAuth } from '../context/AuthContext';
 import { RootDrawerParamList } from '../navigation';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -33,26 +36,31 @@ interface TicketWithEvent extends Ticket {
 
 export default function MyTickets() {
   const navigation = useNavigation<MyTicketsNavigationProp>();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<TicketWithEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingLogin, setLoadingLogin] = useState(false);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [qrData, setQrData] = useState<string | null>(null);
 
   useEffect(() => {
     loadUserAndTickets();
-  }, []);
+  }, [user]);
 
   const loadUserAndTickets = async () => {
     setLoading(true);
     try {
-      const currentUser = await UserService.me();
-      setUser(currentUser);
-
-      const userTickets = await TicketService.findByBuyerEmail(currentUser.email);
+      if (!user) {
+        setTickets([]);
+        setLoading(false);
+        return;
+      }
+      const userTickets = await ticketsService.getTicketsByBuyerEmail(user.email);
       const withEvents = await attachEvents(userTickets);
       setTickets(withEvents);
     } catch (error) {
-      setUser(null);
+      console.error('Erro ao carregar usuário e tickets:', error);
+      setTickets([]);
     }
     setLoading(false);
   };
@@ -63,9 +71,11 @@ export default function MyTickets() {
 
     await Promise.all(
       uniqueEventIds.map(async (id) => {
-        const result = await EventService.filter({ id });
-        if (result.length > 0) {
-          eventsById[id] = result[0];
+        try {
+          const event = await eventsService.getEventById(id);
+          eventsById[id] = event;
+        } catch (error) {
+          console.error(`Erro ao buscar evento ${id}:`, error);
         }
       })
     );
@@ -73,20 +83,8 @@ export default function MyTickets() {
     return ticketList.map(t => ({ ...t, event: eventsById[t.event_id] }));
   };
 
-  const handleLogin = async () => {
-    setLoadingLogin(true);
-    try {
-      await UserService.loginWithRedirect();
-      const currentUser = await UserService.me();
-      setUser(currentUser);
-      const userTickets = await TicketService.findByBuyerEmail(currentUser.email);
-      const withEvents = await attachEvents(userTickets);
-      setTickets(withEvents);
-    } catch (e) {
-      // ignore
-    }
-    setLoadingLogin(false);
-  };
+  const handleGoToLogin = () => navigation.navigate('Login');
+  const handleGoToRegister = () => navigation.navigate('Register');
 
   const getStatusBadge = (ticket: TicketWithEvent) => {
     const event = ticket.event;
@@ -97,6 +95,17 @@ export default function MyTickets() {
       return <Badge style={[styles.badge, { backgroundColor: '#6B7280' }] as StyleProp<ViewStyle>}><Text style={styles.badgeText}>Expirado</Text></Badge>;
     }
     return <Badge style={[styles.badge, { backgroundColor: '#8B5CF6' }] as StyleProp<ViewStyle>}><Text style={styles.badgeText}>Válido</Text></Badge>;
+  };
+
+  const openQrModal = (ticket: TicketWithEvent) => {
+    const data = ticket.qr_code || ticket.id;
+    setQrData(data);
+    setQrModalVisible(true);
+  };
+
+  const closeQrModal = () => {
+    setQrModalVisible(false);
+    setQrData(null);
   };
 
   if (loading) {
@@ -118,15 +127,11 @@ export default function MyTickets() {
             </View>
             <Text style={styles.authTitle}>Entre na sua conta</Text>
             <Text style={styles.authSubtitle}>Faça login para ver seus ingressos comprados</Text>
-            <Button onPress={handleLogin} style={styles.authPrimaryButton}>
-              {loadingLogin ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.authPrimaryButtonText}>Entrar com Google</Text>
-              )}
+            <Button onPress={() => navigation.navigate('Login')} style={styles.authPrimaryButton}>
+              <Text style={styles.authPrimaryButtonText}>Ir para Login</Text>
             </Button>
-            <TouchableOpacity style={styles.authSecondaryButton} onPress={() => navigation.navigate('HomeStack')}>
-              <Text style={styles.authSecondaryButtonText}>Voltar aos eventos</Text>
+            <TouchableOpacity style={styles.authSecondaryButton} onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.authSecondaryButtonText}>Ir para Cadastro</Text>
             </TouchableOpacity>
           </CardContent>
         </Card>
@@ -200,9 +205,9 @@ export default function MyTickets() {
                           <Text style={styles.priceLabel}>Valor pago</Text>
                           <Text style={styles.priceValue}>R$ {ticket.total_price.toFixed(2).replace('.', ',')}</Text>
                         </View>
-                        <Button style={styles.detailsButton} onPress={() => navigation.navigate('HomeStack', { screen: 'EventDetails', params: { id: event.id } } as any)}>
-                          <Text style={styles.detailsButtonText}>Ver Evento</Text>
-                          <Ionicons name="chevron-forward" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                        <Button style={styles.detailsButton} onPress={() => openQrModal(ticket)}>
+                          <Text style={styles.detailsButtonText}>Ver Ingresso</Text>
+                          <Ionicons name="qr-code" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
                         </Button>
                       </View>
                     </CardContent>
@@ -214,6 +219,44 @@ export default function MyTickets() {
         )}
       </View>
       </ScrollView>
+
+      {/* QR Modal */}
+      <Modal
+        visible={qrModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeQrModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seu Ingresso</Text>
+              <TouchableOpacity onPress={closeQrModal} accessibilityLabel="Fechar">
+                <Ionicons name="close" size={22} color="#1E293B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              {qrData ? (
+                <View style={styles.qrContainer}>
+                  <QRCode value={qrData} size={280} backgroundColor="#FFFFFF" color="#111827" />
+                </View>
+              ) : (
+                <Text style={styles.infoText}>QR Code indisponível</Text>
+              )}
+              {qrData && (
+                <Text style={styles.qrHint}>Apresente este QR Code na entrada do evento</Text>
+              )}
+            </View>
+
+            <View style={styles.modalFooter}>
+              <Button style={styles.primaryCta} onPress={closeQrModal}>
+                <Text style={styles.primaryCtaText}>Fechar</Text>
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -383,6 +426,66 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  modalBody: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  qrImage: {
+    width: 280,
+    height: 280,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+  },
+  qrHint: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#64748B',
+  },
+  modalFooter: {
+    marginTop: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrContainer: {
+    width: 300,
+    height: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 10,
+    marginBottom: 8,
   },
   badge: {
     paddingHorizontal: 10,

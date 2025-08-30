@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 // LinearGradient removed - using View with background color instead
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,8 @@ import { ptBR } from 'date-fns/locale';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Event, EventService } from '../../../../packages/entities/src/Event';
+import { Event } from '@ingressohub/entities';
+import { eventsService } from '../services';
 import { RootDrawerParamList } from '../navigation';
 import { Card, CardContent } from '../components/Card';
 import { Badge } from '../components/Badge';
@@ -36,10 +38,15 @@ export default function Home() {
   const loadEvents = async () => {
     setLoading(true);
     try {
-      const data = await EventService.filter({ status: 'active' }, 'date');
+      const data = await eventsService.getActiveEvents();
       setEvents(data);
     } catch (error) {
       console.error('Erro ao carregar eventos:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível carregar os eventos. Verifique sua conexão com a internet.',
+        [{ text: 'OK' }]
+      );
     }
     setLoading(false);
   };

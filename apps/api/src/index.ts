@@ -6,6 +6,7 @@ import { validateEnvironment } from './db';
 import apiRoutes from './routes';
 
 const app = express();
+const IP = process.env.IP || '192.168.0.101'
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -49,10 +50,12 @@ const startServer = async () => {
     console.log('✅ Environment variables validated');
 
 
-    app.listen(PORT, () => {
+    app.listen(Number(PORT), '0.0.0.0', () => {
       console.log(`🚀 IngressoHub API running on port ${PORT}`);
       console.log(`📱 Health check: http://localhost:${PORT}/health`);
+      console.log(`📱 Health check: http://${IP}:${PORT}/health`);
       console.log(`🎫 Events: http://localhost:${PORT}/api/events`);
+      console.log(`🎫 Events: http://${IP}:${PORT}/api/events`);
       console.log(`🎟️ Tickets: http://localhost:${PORT}/api/tickets`);
       console.log(`👥 Users: http://localhost:${PORT}/api/users`);
       console.log(`🗄️ Database: DynamoDB`);

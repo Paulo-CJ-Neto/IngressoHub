@@ -13,10 +13,13 @@ declare global {
       
       // Environment
       NODE_ENV?: 'development' | 'production' | 'test';
-      PORT?: string;
+      PORT?: number;
       
       // DynamoDB Local (development)
       DYNAMODB_ENDPOINT?: string;
+
+      // Tickets
+      TICKET_JWT_PRIVATE_KEY?: string;
     }
   }
 }

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { TicketRepository } from '../db/repositories/TicketRepository';
 import { EventRepository } from '../db/repositories/EventRepository';
 import { Ticket } from '@ingressohub/entities';
+import { TicketService } from '../services/TicketService';
 
 const router = Router();
 
@@ -98,60 +99,24 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/tickets - Criar novo ticket
+// POST /api/tickets - Criar novo ticket (JWT + QRCode)
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const ticketData: Partial<Ticket> = req.body;
-    
-    // Validar dados obrigatórios
-    if (!ticketData.event_id || !ticketData.buyer_name || !ticketData.buyer_email || !ticketData.buyer_cpf) {
-      return res.status(400).json({ 
-        error: 'ID do evento, nome, email e CPF do comprador são obrigatórios' 
-      });
+    const { eventId, userId } = req.body as { eventId?: string; userId?: string };
+    if (!eventId || !userId) {
+      return res.status(400).json({ error: 'eventId e userId são obrigatórios' });
     }
-    
-    // Verificar se o evento existe
-    const event = await EventRepository.findById(ticketData.event_id);
-    if (!event) {
+
+    const result = await TicketService.createTicket({ eventId, userId });
+    res.status(201).json(result);
+  } catch (error: any) {
+    if (error?.message?.includes('não configurada') || error?.message?.includes('Chave privada')) {
+      return res.status(500).json({ error: 'Falha na configuração da assinatura do JWT' });
+    }
+    if (error?.message?.includes('Evento não encontrado')) {
       return res.status(404).json({ error: 'Evento não encontrado' });
     }
-    
-    // Verificar disponibilidade de ingressos
-    if (event.sold_tickets + (ticketData.quantity || 1) > event.max_tickets) {
-      return res.status(400).json({ 
-        error: 'Quantidade de ingressos não disponível' 
-      });
-    }
-    
-    // Gerar ID se não fornecido
-    if (!ticketData.id) {
-      ticketData.id = `ticket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    }
-    
-    // Gerar QR Code se não fornecido
-    if (!ticketData.qr_code) {
-      ticketData.qr_code = await TicketRepository.generateUniqueQrCode();
-    }
-    
-    // Definir valores padrão
-    ticketData.status = ticketData.status || 'valid';
-    ticketData.created_at = ticketData.created_at || new Date().toISOString();
-    ticketData.quantity = ticketData.quantity || 1;
-    
-    // Calcular preço total se não fornecido
-    if (!ticketData.total_price) {
-      ticketData.total_price = event.price * (ticketData.quantity || 1);
-    }
-    
-    // Criar o ticket
-    const ticket = await TicketRepository.createOrUpdate(ticketData as Ticket);
-    
-    // Incrementar contador de ingressos vendidos no evento
-    await EventRepository.incrementSoldTickets(event.id, ticketData.quantity || 1);
-    
-    res.status(201).json(ticket);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Falha na criação do ticket' });
   }
 });
 
