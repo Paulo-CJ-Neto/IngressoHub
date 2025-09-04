@@ -3,6 +3,7 @@ import eventsRouter from './events';
 import ticketsRouter from './tickets';
 import usersRouter from './users';
 import authRouter from './auth';
+import paymentsRouter from './payments';
 
 const router = Router();
 
@@ -20,5 +21,8 @@ router.use(`${API_PREFIX}/users`, usersRouter);
 
 // Rotas de autenticação
 router.use(`${API_PREFIX}/auth`, authRouter);
+
+// Rotas de pagamento
+router.use(`${API_PREFIX}/payments`, paymentsRouter);
 
 export default router;

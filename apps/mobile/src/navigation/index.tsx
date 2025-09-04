@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@/context/AuthContext';
 
 import Home from '@/screens/Home';
 import EventDetails from '@/screens/EventDetails';
@@ -13,8 +14,13 @@ import ValidateTicket from '@/screens/ValidateTicket';
 import Contact from '@/screens/Contact';
 import Login from '@/screens/Login';
 import Register from '@/screens/Register';
+import EmailVerification from '@/screens/EmailVerification';
 import Profile from '@/screens/Profile';
 import PixPayment from '@/screens/PixPayment';
+
+// Navegações específicas por tipo de usuário
+import ProducerNavigation from './ProducerNavigation';
+import AdminNavigation from './AdminNavigation';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -36,6 +42,7 @@ export type RootDrawerParamList = {
   Contact: undefined;
   Login: undefined;
   Register: undefined;
+  EmailVerification: { email: string; fullName: string };
   Profile: undefined;
 };
 
@@ -74,6 +81,26 @@ function HomeStackNavigator() {
 }
 
 export default function Navigation() {
+  const { user, isClient, isProducer, isAdmin } = useAuth();
+
+  // Renderizar navegação baseada no tipo de usuário
+  if (isProducer) {
+    return (
+      <NavigationContainer>
+        <ProducerNavigation />
+      </NavigationContainer>
+    );
+  }
+
+  if (isAdmin) {
+    return (
+      <NavigationContainer>
+        <AdminNavigation />
+      </NavigationContainer>
+    );
+  }
+
+  // Navegação padrão para clientes
   return (
     <NavigationContainer>
       <Drawer.Navigator
@@ -138,6 +165,15 @@ export default function Navigation() {
             title: 'Cadastro', 
             drawerItemStyle: { display: 'none' },
             drawerIcon: ({ color, size }) => (<Ionicons name="person-add-outline" color={color} size={size} />),
+          }} 
+        />
+        <Drawer.Screen 
+          name="EmailVerification" 
+          component={EmailVerification} 
+          options={{ 
+            title: 'Verificação de Email', 
+            drawerItemStyle: { display: 'none' },
+            drawerIcon: ({ color, size }) => (<Ionicons name="mail-outline" color={color} size={size} />),
           }} 
         />
       </Drawer.Navigator>

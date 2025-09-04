@@ -26,8 +26,28 @@ export default function Login() {
     try {
       await signInWithEmail(email, password);
       navigation.navigate('MyTickets');
-    } catch (e) {
-      Alert.alert('E-mail ou senha inválidos');
+    } catch (e: any) {
+      if (e.message === 'EMAIL_NOT_VERIFIED') {
+        Alert.alert(
+          'Email não verificado',
+          'Verifique sua caixa de entrada e confirme seu email antes de fazer login.',
+          [
+            {
+              text: 'Verificar Email',
+              onPress: () => navigation.navigate('EmailVerification', {
+                email: email,
+                fullName: email.split('@')[0]
+              })
+            },
+            {
+              text: 'Cancelar',
+              style: 'cancel'
+            }
+          ]
+        );
+      } else {
+        Alert.alert('E-mail ou senha inválidos');
+      }
     }
   };
 

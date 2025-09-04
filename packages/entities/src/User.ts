@@ -5,6 +5,10 @@ export interface User {
   password_hash?: string;
   avatar_url?: string;
   created_at: string;
+  email_verified?: boolean;
+  email_verification_token?: string;
+  email_verification_expires?: string;
+  user_type: 'client' | 'producer' | 'admin';
 }
 
 // Dados mockados para demonstração
@@ -32,7 +36,8 @@ export class UserService {
       email: 'usuario@exemplo.com',
       full_name: 'João Silva',
       avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      user_type: 'client' // Adicionado para mock
     };
     
     // Em um app real, aqui você redirecionaria para a URL de retorno

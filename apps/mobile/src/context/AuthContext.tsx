@@ -8,8 +8,11 @@ import api from '../services/api';
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
+  isClient: boolean;
+  isProducer: boolean;
+  isAdmin: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  registerWithEmail: (email: string, password: string, full_name?: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, full_name?: string, user_type?: 'client' | 'producer' | 'admin') => Promise<{ user: User; requiresEmailVerification: boolean }>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -54,10 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem('auth:user', JSON.stringify(logged));
   };
 
-  const registerWithEmail = async (email: string, password: string, full_name?: string) => {
-    const created = await authService.registerWithEmail(email, password, full_name);
-    setUser(created);
-    await AsyncStorage.setItem('auth:user', JSON.stringify(created));
+  const registerWithEmail = async (email: string, password: string, full_name?: string, user_type?: 'client' | 'producer' | 'admin') => {
+    const result = await authService.registerWithEmail(email, password, full_name, user_type);
+    
+    // Se não precisar de verificação, salvar usuário e token
+    if (!result.requiresEmailVerification) {
+      setUser(result.user);
+      await AsyncStorage.setItem('auth:user', JSON.stringify(result.user));
+    }
+    
+    return result;
   };
 
   const signInWithGoogle = async () => {
@@ -88,9 +97,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.removeItem('auth:user');
   };
 
+  // Calcular tipos de usuário
+  const isClient = user?.user_type === 'client';
+  const isProducer = user?.user_type === 'producer';
+  const isAdmin = user?.user_type === 'admin';
+
   const value = useMemo(
-    () => ({ user, loading, signInWithEmail, registerWithEmail, signInWithGoogle, signInWithApple, signOut }),
-    [user, loading]
+    () => ({ 
+      user, 
+      loading, 
+      isClient, 
+      isProducer, 
+      isAdmin,
+      signInWithEmail, 
+      registerWithEmail, 
+      signInWithGoogle, 
+      signInWithApple, 
+      signOut 
+    }),
+    [user, loading, isClient, isProducer, isAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,3 +1,4 @@
 export { EventRepository } from './EventRepository';
-export { UserRepository } from './UserRepository';
 export { TicketRepository } from './TicketRepository';
+export { UserRepository } from './UserRepository';
+export { PaymentRepository } from './PaymentRepository';

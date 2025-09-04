@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
 import { User } from '@ingressohub/entities';
 import { UserRepository } from '../db/repositories/UserRepository';
 import { requireAuth } from '../middleware/auth';
+import { EmailService } from '../services/EmailService';
 
 // Configurações para autenticação social
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'your-google-client-id';
@@ -41,6 +43,15 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
     
+    // Verificar se o email foi confirmado
+    if (!user.email_verified) {
+      return res.status(403).json({ 
+        message: 'Email não verificado. Verifique sua caixa de entrada e confirme seu email.',
+        requiresEmailVerification: true,
+        email: user.email
+      });
+    }
+    
     const token = signToken(user);
     return res.json({ token, user });
   } catch (e) {
@@ -51,13 +62,24 @@ router.post('/login', async (req, res) => {
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, full_name } = req.body as { email: string; password: string; full_name?: string };
+    const { email, password, full_name, user_type = 'client' } = req.body as { 
+      email: string; 
+      password: string; 
+      full_name?: string;
+      user_type?: 'client' | 'producer' | 'admin';
+    };
+    
     if (!email || !password) {
       return res.status(400).json({ message: 'Email e senha são obrigatórios.' });
     }
     
     if (password.length < 6) {
       return res.status(400).json({ message: 'A senha deve ter pelo menos 6 caracteres.' });
+    }
+    
+    // Validar user_type
+    if (!['client', 'producer', 'admin'].includes(user_type)) {
+      return res.status(400).json({ message: 'Tipo de usuário inválido.' });
     }
     
     const exists = await UserRepository.emailExists(email);
@@ -69,6 +91,10 @@ router.post('/register', async (req, res) => {
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(password, saltRounds);
     
+    // Gerar token de verificação
+    const verificationToken = uuidv4();
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 horas
+    
     const newUser: User = {
       id: `user_${Date.now()}`,
       email,
@@ -76,18 +102,130 @@ router.post('/register', async (req, res) => {
       password_hash: passwordHash,
       avatar_url: '',
       created_at: new Date().toISOString(),
+      email_verified: false,
+      email_verification_token: verificationToken,
+      email_verification_expires: verificationExpires,
+      user_type,
     };
     
     await UserRepository.createOrUpdate(newUser);
     
-    // Não retornar o hash da senha
-    const { password_hash, ...userWithoutPassword } = newUser;
-    const token = signToken(newUser);
+    // Enviar email de verificação
+    try {
+      await EmailService.sendVerificationEmail(email, verificationToken, newUser.full_name);
+    } catch (emailError) {
+      console.warn('⚠️ Erro ao enviar email de verificação, mas usuário foi criado:', emailError);
+    }
     
-    return res.status(201).json({ token, user: userWithoutPassword });
+    // Não retornar o hash da senha nem o token de verificação
+    const { password_hash, email_verification_token, email_verification_expires, ...userWithoutSensitive } = newUser;
+    
+    return res.status(201).json({ 
+      message: 'Usuário criado com sucesso! Verifique seu email para confirmar a conta.',
+      user: userWithoutSensitive,
+      requiresEmailVerification: true
+    });
   } catch (e) {
     console.error('Auth register error', e);
     return res.status(500).json({ message: 'Erro ao cadastrar.' });
+  }
+});
+
+// Endpoint para verificar email
+router.get('/verify-email', async (req, res) => {
+  try {
+    const token = req.query.token as string;
+    
+    if (!token) {
+      return res.status(400).json({ message: 'Token de verificação é obrigatório.' });
+    }
+    
+    // Buscar usuário pelo token
+    const allUsers = await UserRepository.findAll();
+    const user = allUsers.find(u => u.email_verification_token === token);
+    
+    if (!user) {
+      return res.status(400).json({ message: 'Token de verificação inválido.' });
+    }
+    
+    // Verificar se o token expirou
+    if (user.email_verification_expires && new Date(user.email_verification_expires) < new Date()) {
+      return res.status(400).json({ message: 'Token de verificação expirou. Solicite um novo.' });
+    }
+    
+    // Marcar email como verificado
+    const updatedUser = await UserRepository.update(user.id, {
+      email_verified: true,
+      email_verification_token: undefined,
+      email_verification_expires: undefined
+    });
+    
+    if (!updatedUser) {
+      return res.status(500).json({ message: 'Erro ao atualizar usuário.' });
+    }
+    
+    // Enviar email de boas-vindas
+    try {
+      await EmailService.sendWelcomeEmail(user.email, user.full_name);
+    } catch (emailError) {
+      console.warn('⚠️ Erro ao enviar email de boas-vindas:', emailError);
+    }
+    
+    // Gerar token JWT
+    const jwtToken = signToken(updatedUser);
+    
+    // Não retornar dados sensíveis
+    const { password_hash, email_verification_token, email_verification_expires, ...userWithoutSensitive } = updatedUser;
+    
+    return res.json({ 
+      message: 'Email verificado com sucesso! Bem-vindo ao IngressoHub!',
+      token: jwtToken,
+      user: userWithoutSensitive
+    });
+  } catch (e) {
+    console.error('Email verification error', e);
+    return res.status(500).json({ message: 'Erro ao verificar email.' });
+  }
+});
+
+// Endpoint para reenviar email de verificação
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body as { email: string };
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email é obrigatório.' });
+    }
+    
+    const user = await UserRepository.findByEmail(email);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+    
+    if (user.email_verified) {
+      return res.status(400).json({ message: 'Email já foi verificado.' });
+    }
+    
+    // Gerar novo token de verificação
+    const verificationToken = uuidv4();
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 horas
+    
+    await UserRepository.update(user.id, {
+      email_verification_token: verificationToken,
+      email_verification_expires: verificationExpires
+    });
+    
+    // Enviar novo email de verificação
+    try {
+      await EmailService.sendVerificationEmail(email, verificationToken, user.full_name);
+      return res.json({ message: 'Email de verificação reenviado com sucesso!' });
+    } catch (emailError) {
+      console.error('❌ Erro ao reenviar email de verificação:', emailError);
+      return res.status(500).json({ message: 'Erro ao reenviar email de verificação.' });
+    }
+  } catch (e) {
+    console.error('Resend verification error', e);
+    return res.status(500).json({ message: 'Erro ao reenviar verificação.' });
   }
 });
 
@@ -142,6 +280,8 @@ router.post('/social-login', async (req, res) => {
         password_hash: '', // Usuários sociais não têm senha
         avatar_url: provider === 'google' ? auth_data.user_info.picture : '',
         created_at: new Date().toISOString(),
+        email_verified: true, // Usuários sociais já são verificados
+        user_type: 'client', // Por padrão, usuários sociais são clientes
       };
       
       await UserRepository.createOrUpdate(newUser);
@@ -161,8 +301,6 @@ router.post('/social-login', async (req, res) => {
   }
 });
 
-export default router;
-
 // Perfil autenticado
 router.get('/me', requireAuth, async (req, res) => {
   try {
@@ -175,5 +313,7 @@ router.get('/me', requireAuth, async (req, res) => {
     return res.status(500).json({ message: 'Erro ao carregar perfil.' });
   }
 });
+
+export default router;
 
 

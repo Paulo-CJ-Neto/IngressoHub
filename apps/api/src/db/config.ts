@@ -19,6 +19,7 @@ export const TABLE_NAMES = {
   EVENTS: process.env.EVENTS_TABLE_NAME || 'Events',
   TICKETS: process.env.TICKETS_TABLE_NAME || 'Tickets',
   USERS: process.env.USERS_TABLE_NAME || 'Users',
+  PAYMENTS: process.env.PAYMENTS_TABLE_NAME || 'Payments',
 } as const;
 
 // Validação das variáveis de ambiente necessárias
@@ -28,5 +29,15 @@ export function validateEnvironment() {
   
   if (missingVars.length > 0) {
     throw new Error(`Variáveis de ambiente obrigatórias não encontradas: ${missingVars.join(', ')}`);
+  }
+
+  // Validar variáveis do Pagar.me se estivermos em produção
+  if (process.env.NODE_ENV === 'production') {
+    const pagarmeVars = ['PAGARME_API_KEY', 'PAGARME_ENCRYPTION_KEY', 'PAGARME_WEBHOOK_SECRET'];
+    const missingPagarmeVars = pagarmeVars.filter(varName => !process.env[varName]);
+    
+    if (missingPagarmeVars.length > 0) {
+      throw new Error(`Variáveis do Pagar.me obrigatórias não encontradas: ${missingPagarmeVars.join(', ')}`);
+    }
   }
 }

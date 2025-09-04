@@ -57,7 +57,13 @@ const startServer = async () => {
       console.log(`🎫 Events: http://localhost:${PORT}/api/events`);
       console.log(`🎫 Events: http://${IP}:${PORT}/api/events`);
       console.log(`🎟️ Tickets: http://localhost:${PORT}/api/tickets`);
+      console.log(`🎟️ Tickets: http://${IP}:${PORT}/api/tickets`);
       console.log(`👥 Users: http://localhost:${PORT}/api/users`);
+      console.log(`👥 Users: http://${IP}:${PORT}/api/users`);
+      console.log(`💳 Payments: http://localhost:${PORT}/api/payments`);
+      console.log(`💳 Payments: http://${IP}:${PORT}/api/payments`);
+      console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
+      console.log(`🔐 Auth: http://${IP}:${PORT}/api/auth`);
       console.log(`🗄️ Database: DynamoDB`);
     });
   } catch (error) {
