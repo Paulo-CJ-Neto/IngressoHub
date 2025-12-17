@@ -18,7 +18,8 @@ export async function testRoutes() {
       email: `teste${Date.now()}@exemplo.com`,
       full_name: 'Usuário de Teste',
       avatar_url: 'https://example.com/avatar.jpg',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      user_type: 'client' as const
     };
 
     const createdUser = await UserRepository.createOrUpdate(user);
@@ -31,6 +32,7 @@ export async function testRoutes() {
       name: 'Evento de Teste',
       date: new Date('2024-12-31T20:00:00').toISOString(),
       location: 'Local de Teste',
+      producer_id: 'producer_example',
       price: 100.00,
       max_tickets: 500,
       sold_tickets: 0,

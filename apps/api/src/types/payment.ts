@@ -9,7 +9,7 @@ export interface Payment {
   pixQrCode?: string;
   pixQrCodeBase64?: string;
   pixCopyPaste?: string;
-  pagarmeTransactionId?: string;
+  abacatePayBillingId?: string;
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
@@ -17,88 +17,65 @@ export interface Payment {
 }
 
 export enum PaymentStatus {
-  PENDING = 'pending',
-  WAITING_PAYMENT = 'waiting_payment',
-  PAID = 'paid',
-  FAILED = 'failed',
-  EXPIRED = 'expired',
-  CANCELLED = 'cancelled'
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
+  EXPIRED = 'EXPIRED',
+  CANCELLED = 'CANCELLED'
 }
 
-// Tipos para a API do Pagar.me
-export interface PagarmePixRequest {
-  amount: number;
-  payment_method: 'pix';
-  pix_expiration_date?: string;
-  customer: {
+// Tipos para a API do AbacatePay (PIX QRCode)
+export interface AbacatePayPixQrCodeRequest {
+  amount: number; // Valor em centavos
+  expiresIn?: number; // Tempo de expiração em segundos
+  description?: string; // Descrição do pagamento (máx 140 caracteres)
+  customer?: {
     name: string;
+    cellphone?: string;
     email: string;
-    type: 'individual' | 'company';
-    document: string;
+    taxId: string; // CPF/CNPJ
   };
-  items: Array<{
-    amount: number;
-    description: string;
-    quantity: number;
-    code: string;
-  }>;
-  metadata?: Record<string, any>;
+  metadata?: {
+    externalId?: string;
+    userId?: string;
+    eventId?: string;
+    [key: string]: any;
+  };
 }
 
-export interface PagarmePixResponse {
-  id: number;
-  status: string;
-  amount: number;
-  payment_method: 'pix';
-  pix_qr_code: string;
-  pix_qr_code_base64: string;
-  pix_expiration_date: string;
-  created_at: string;
-  updated_at: string;
-  customer: {
-    id: number;
-    name: string;
-    email: string;
-    type: string;
-    document: string;
-  };
-  items: Array<{
+export interface AbacatePayPixQrCodeResponse {
+  data: {
     id: string;
     amount: number;
-    description: string;
-    quantity: number;
-    code: string;
-  }>;
-  metadata?: Record<string, any>;
+    status: 'PENDING' | 'EXPIRED' | 'CANCELLED' | 'PAID' | 'REFUNDED';
+    devMode: boolean;
+    brCode: string; // Código copia-e-cola PIX
+    brCodeBase64: string; // Imagem base64 do QR Code
+    platformFee: number;
+    createdAt: string;
+    updatedAt: string;
+    expiresAt: string;
+  };
+  error: string | null;
 }
 
-export interface PagarmeWebhookPayload {
+export interface AbacatePayWebhookPayload {
   type: string;
-  data: {
-    id: number;
+  billing: {
+    id: string;
     status: string;
-    amount: number;
-    payment_method: string;
-    pix_qr_code?: string;
-    pix_qr_code_base64?: string;
-    pix_expiration_date?: string;
-    created_at: string;
-    updated_at: string;
-    customer: {
-      id: number;
-      name: string;
-      email: string;
-      type: string;
-      document: string;
+    integration?: {
+      pix?: {
+        code?: string;
+        qrCodeUrl?: string;
+      };
     };
-    items: Array<{
-      id: string;
-      amount: number;
-      description: string;
-      quantity: number;
-      code: string;
-    }>;
-    metadata?: Record<string, any>;
+  };
+  customer?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    taxId?: string;
   };
 }
 

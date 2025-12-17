@@ -4,6 +4,7 @@ import ticketsRouter from './tickets';
 import usersRouter from './users';
 import authRouter from './auth';
 import paymentsRouter from './payments';
+import validateTicketRouter from './validate-ticket';
 
 const router = Router();
 
@@ -24,5 +25,8 @@ router.use(`${API_PREFIX}/auth`, authRouter);
 
 // Rotas de pagamento
 router.use(`${API_PREFIX}/payments`, paymentsRouter);
+
+// Validação de ingressos por QR
+router.use(`${API_PREFIX}/validate-ticket`, validateTicketRouter);
 
 export default router;

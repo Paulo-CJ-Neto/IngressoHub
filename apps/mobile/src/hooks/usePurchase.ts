@@ -5,12 +5,11 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Event } from '@ingressohub/entities';
-import { eventsService, ticketsService } from '../services';
-import { RootStackParamList, RootDrawerParamList } from '../navigation';
-import { useAuth } from '../context/AuthContext';
-import { validateCPF } from '../utils/formatters';
-import { MOCK_TICKET_TYPES } from '../constants/ticketTypes';
-import { TicketType } from '../components/TicketTypeSelector';
+import { eventsService, ticketsService, paymentService } from '@/services';
+import { RootStackParamList, RootDrawerParamList } from '@/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { validateCPF } from '@/utils/formatters';
+import { TicketType } from '@/components/ticket';
 
 type PurchaseNavigationProp = StackNavigationProp<RootStackParamList, 'Purchase'>;
 type PurchaseRouteProp = RouteProp<RootStackParamList, 'Purchase'>;
@@ -79,6 +78,27 @@ export function usePurchase() {
     setLoading(false);
   };
 
+  const mapEventTicketTypesToUI = (): TicketType[] => {
+    if (!event || !Array.isArray(event.ticket_types)) return [];
+    return event.ticket_types.map((type, index) => {
+      const safeName = type.name || `Tipo ${index + 1}`;
+      const generatedId = `${event.id || 'event'}_type_${index}_${safeName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      const id = type.id || generatedId;
+      const available_quantity = Math.max(0, (type.quantity || 0) - (type.sold || 0));
+      const { price, original_price, discount_percentage } = mapPriceToUI(Number(type.price || 0));
+      return {
+        id,
+        name: safeName,
+        description: 'Ingresso',
+        price,
+        original_price,
+        discount_percentage,
+        available_quantity,
+        icon: pickIconByName(safeName),
+      } as TicketType;
+    });
+  };
+
   const handleLogin = () => {
     drawerNavigation.navigate('Login');
   };
@@ -97,7 +117,7 @@ export function usePurchase() {
 
   const getTotalPrice = () => {
     return Object.entries(selectedTickets).reduce((total, [ticketTypeId, quantity]) => {
-      const ticketType = MOCK_TICKET_TYPES.find(t => t.id === ticketTypeId);
+      const ticketType = mapEventTicketTypesToUI().find(t => t.id === ticketTypeId);
       return total + (ticketType ? ticketType.price * quantity : 0);
     }, 0);
   };
@@ -135,18 +155,51 @@ export function usePurchase() {
     if (!event) return;
 
     if (paymentMethod === 'pix') {
-      const pixData = {
-        qrCode: 'qr_code_gerado_pelo_backend',
-        pixCode: '00020126580014br.gov.bcb.pix0136123e4567-e89b-12d3-a456-426614174000520400005303986540510.005802BR5913Nome do Evento6008Local do Evento62070503***6304ABCD',
-        amount: getTotalPrice(),
-        eventName: event.name,
-        ticketTypes: Object.entries(selectedTickets).map(([id, quantity]) => ({
-          id,
-          quantity
-        }))
-      };
-      
-      navigation.navigate('PixPayment', pixData);
+      setProcessing(true);
+      try {
+        // Gerar um ticketId temporário (será usado para referenciar os tickets após pagamento)
+        const temporaryTicketId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Criar pagamento PIX
+        const paymentResponse = await paymentService.createPixPayment({
+          userId: user?.id || 'anonymous',
+          ticketId: temporaryTicketId,
+          eventId: event.id,
+          amount: Math.round(getTotalPrice() * 100), // Converter para centavos
+          customerName: buyerInfo.name,
+          customerEmail: buyerInfo.email,
+          customerDocument: buyerInfo.cpf.replace(/\D/g, ''), // Remove formatação
+          eventName: event.name,
+        });
+
+        // Navegar para tela de pagamento PIX com os dados reais
+        navigation.navigate('PixPayment', {
+          paymentId: paymentResponse.payment.id,
+          qrCode: paymentResponse.pixQrCodeBase64, // Imagem base64 do QR Code
+          pixCode: paymentResponse.pixCopyPaste, // Código copia-e-cola
+          amount: getTotalPrice(),
+          eventName: event.name,
+          eventId: event.id,
+          buyer: {
+            name: buyerInfo.name,
+            cpf: buyerInfo.cpf.replace(/\D/g, ''),
+            email: buyerInfo.email,
+          },
+          ticketTypes: Object.entries(selectedTickets).map(([id, quantity]) => ({
+            id,
+            quantity
+          })),
+          expiresAt: paymentResponse.expiresAt,
+        });
+      } catch (error: any) {
+        console.error("Erro ao criar pagamento PIX:", error);
+        Alert.alert(
+          'Erro ao criar pagamento', 
+          error.message || 'Não foi possível criar o pagamento PIX. Tente novamente.'
+        );
+      } finally {
+        setProcessing(false);
+      }
       return;
     }
 
@@ -183,7 +236,7 @@ export function usePurchase() {
     processing,
     paymentMethod,
     user,
-    ticketTypes: MOCK_TICKET_TYPES,
+    ticketTypes: mapEventTicketTypesToUI(),
     setBuyerInfo,
     setPaymentMethod,
     handleLogin,
@@ -196,4 +249,16 @@ export function usePurchase() {
     handlePurchase,
     navigation,
   };
+}
+function mapPriceToUI(price: number): { price: number; original_price: number; discount_percentage?: number } {
+  // Sem descontos dinâmicos por enquanto; usa o mesmo preço como original
+  return { price, original_price: price };
+}
+
+function pickIconByName(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.includes('vip')) return '⭐';
+  if (lower.includes('camarote')) return '🥂';
+  if (lower.includes('pista')) return '🎫';
+  return '🎟️';
 }

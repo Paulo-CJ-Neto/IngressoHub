@@ -22,11 +22,11 @@ declare global {
       // Tickets
       TICKET_JWT_PRIVATE_KEY?: string;
 
-      // Pagar.me
-      PAGARME_API_KEY: string;
-      PAGARME_ENCRYPTION_KEY: string;
-      PAGARME_WEBHOOK_SECRET: string;
-      PAGARME_ENVIRONMENT?: 'sandbox' | 'production';
+      // AbacatePay
+      ABACATEPAY_API_KEY?: string;
+
+      // S3
+      S3_BUCKET_NAME?: string;
     }
   }
 }

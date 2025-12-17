@@ -235,8 +235,10 @@ export class TicketRepository {
         },
         ExpressionAttributeValues: {
           ':status': 'used',
-          ':used_at': new Date().toISOString()
+          ':used_at': new Date().toISOString(),
+          ':expected': 'valid'
         },
+        ConditionExpression: '#status = :expected',
         ReturnValues: 'ALL_NEW'
       });
 

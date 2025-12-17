@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApiBaseUrl, getApiHeaders } from '../config/api';
-import { getConfig } from '../config/development';
+import { getApiBaseUrl, getApiHeaders } from '@/config/api';
+import { getConfig } from '@/config/development';
 
 // Configuração base do Axios
 const api = axios.create({

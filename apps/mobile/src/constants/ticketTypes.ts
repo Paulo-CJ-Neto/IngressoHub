@@ -1,4 +1,4 @@
-import { TicketType } from '../components/TicketTypeSelector';
+import { TicketType } from '@/components/ticket';
 
 export const MOCK_TICKET_TYPES: TicketType[] = [
   {

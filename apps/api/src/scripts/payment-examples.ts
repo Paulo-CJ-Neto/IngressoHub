@@ -14,8 +14,8 @@ async function paymentExamples() {
     validateEnvironment();
     const paymentService = new PaymentService();
 
-    if (!paymentService.isPagarmeConfigured()) {
-      console.log('⚠️  Pagar.me não configurado. Execute os exemplos apenas para entender a estrutura.\n');
+    if (!paymentService.isAbacatePayConfigured()) {
+      console.log('⚠️  AbacatePay não configurado. Execute os exemplos apenas para entender a estrutura.\n');
     }
 
     console.log('📋 Estrutura da API de Pagamentos:\n');
@@ -68,7 +68,7 @@ async function paymentExamples() {
         pixQrCode: '00020126...',
         pixQrCodeBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
         pixCopyPaste: '00020126...',
-        pagarmeTransactionId: '12345',
+        abacatePayBillingId: 'billing_12345',
         expiresAt: '2024-01-15T10:00:00.000Z',
         createdAt: '2024-01-15T09:00:00.000Z',
         updatedAt: '2024-01-15T09:30:00.000Z',
@@ -132,49 +132,35 @@ async function paymentExamples() {
       success: true,
       service: 'Payment Service',
       status: 'configured',
-      pagarme: {
+      abacatePay: {
         configured: true,
-        environment: 'sandbox'
+        apiKeySet: true
       },
       timestamp: new Date().toISOString()
     }, null, 2));
     console.log('\n' + '='.repeat(80) + '\n');
 
     // Exemplo 6: Webhook (estrutura)
-    console.log('6️⃣ Webhook do Pagar.me');
-    console.log('POST /api/payments/webhook (chamado pelo Pagar.me)');
+    console.log('6️⃣ Webhook do AbacatePay');
+    console.log('POST /api/payments/webhook (chamado pelo AbacatePay)');
     console.log('\nPayload recebido:');
     console.log(JSON.stringify({
-      type: 'order.paid',
-      data: {
-        id: 12345,
+      type: 'billing.paid',
+      billing: {
+        id: 'billing_12345',
         status: 'paid',
-        amount: 5000,
-        payment_method: 'pix',
-        created_at: '2024-01-15T09:30:00.000Z',
-        updated_at: '2024-01-15T09:30:00.000Z',
-        customer: {
-          id: 67890,
-          name: 'João Silva',
-          email: 'joao@email.com',
-          type: 'individual',
-          document: '12345678901'
-        },
-        items: [
-          {
-            id: 'item-123',
-            amount: 5000,
-            description: 'Ingresso para Show de Rock',
-            quantity: 1,
-            code: 'ticket-456'
+        integration: {
+          pix: {
+            code: '00020126...',
+            qrCodeUrl: 'https://example.com/qrcode.png'
           }
-        ],
-        metadata: {
-          paymentId: 'payment-uuid-123',
-          ticketId: 'ticket-456',
-          eventId: 'event-789',
-          userId: 'user-123'
         }
+      },
+      customer: {
+        id: 'user-123',
+        name: 'João Silva',
+        email: 'joao@email.com',
+        taxId: '12345678901'
       }
     }, null, 2));
     console.log('\n' + '='.repeat(80) + '\n');

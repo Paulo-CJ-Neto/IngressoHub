@@ -3,12 +3,23 @@ export interface Event {
   name: string;
   date: string;
   location: string;
+  producer_id: string;
   price: number;
   max_tickets: number;
   sold_tickets: number;
   image_url?: string;
+  image_urls?: string[];
   description?: string;
   status: 'active' | 'inactive';
+  ticket_types?: EventTicketType[];
+}
+
+export interface EventTicketType {
+  id?: string;
+  name: string;
+  quantity: number;
+  price: number;
+  sold: number;
 }
 
 // Dados mockados para demonstração
@@ -18,6 +29,7 @@ const mockEvents: Event[] = [
     name: 'Show de Rock In Rio',
     date: new Date('2024-12-15T20:00:00').toISOString(),
     location: 'Parque Olímpico, Rio de Janeiro',
+    producer_id: 'producer_1',
     price: 150.00,
     max_tickets: 1000,
     sold_tickets: 850,
@@ -30,6 +42,7 @@ const mockEvents: Event[] = [
     name: 'Festival de Música Eletrônica',
     date: new Date('2024-11-20T22:00:00').toISOString(),
     location: 'Autódromo de Interlagos, São Paulo',
+    producer_id: 'producer_1',
     price: 200.00,
     max_tickets: 500,
     sold_tickets: 490,
@@ -42,6 +55,7 @@ const mockEvents: Event[] = [
     name: 'Teatro: Romeu e Julieta',
     date: new Date('2024-10-25T19:30:00').toISOString(),
     location: 'Teatro Municipal, São Paulo',
+    producer_id: 'producer_2',
     price: 80.00,
     max_tickets: 200,
     sold_tickets: 120,
@@ -54,6 +68,7 @@ const mockEvents: Event[] = [
     name: 'Stand-up Comedy Night',
     date: new Date('2024-11-10T21:00:00').toISOString(),
     location: 'Casa de Comédia, Rio de Janeiro',
+    producer_id: 'producer_2',
     price: 60.00,
     max_tickets: 150,
     sold_tickets: 150,

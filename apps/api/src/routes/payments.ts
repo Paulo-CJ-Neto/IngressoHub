@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PaymentService } from '../services/PaymentService';
-import { CreatePixPaymentRequest, PagarmeWebhookPayload } from '../types/payment';
+import { CreatePixPaymentRequest, AbacatePayWebhookPayload, PaymentStatus } from '../types/payment';
 
 const router = Router();
 const paymentService = new PaymentService();
@@ -11,12 +11,12 @@ const paymentService = new PaymentService();
  */
 router.post('/pix', async (req: Request, res: Response) => {
   try {
-    // Verificar se o Pagar.me está configurado
-    if (!paymentService.isPagarmeConfigured()) {
+    // Verificar se o AbacatePay está configurado
+    if (!paymentService.isAbacatePayConfigured()) {
       return res.status(503).json({
         success: false,
         error: 'Serviço de pagamento não configurado',
-        message: 'As credenciais do Pagar.me não estão configuradas'
+        message: 'As credenciais do AbacatePay não estão configuradas'
       });
     }
 
@@ -53,23 +53,23 @@ router.post('/pix', async (req: Request, res: Response) => {
 
 /**
  * POST /payments/webhook
- * Webhook do Pagar.me para notificações de status
+ * Webhook do AbacatePay para notificações de status
  */
 router.post('/webhook', async (req: Request, res: Response) => {
   try {
-    const webhookPayload: PagarmeWebhookPayload = req.body;
+    const webhookPayload: AbacatePayWebhookPayload = req.body;
 
     // Log do webhook recebido
-    console.log('Webhook recebido do Pagar.me:', {
+    console.log('Webhook recebido do AbacatePay:', {
       type: webhookPayload.type,
-      transactionId: webhookPayload.data.id,
+      billingId: webhookPayload.billing?.id,
       timestamp: new Date().toISOString(),
       ip: req.ip,
       userAgent: req.get('User-Agent')
     });
 
-    // Validar se é um webhook válido do Pagar.me
-    if (!webhookPayload.type || !webhookPayload.data) {
+    // Validar se é um webhook válido do AbacatePay
+    if (!webhookPayload.type || !webhookPayload.billing) {
       console.warn('Webhook inválido recebido:', webhookPayload);
       return res.status(400).json({
         success: false,
@@ -90,8 +90,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Erro ao processar webhook:', error);
     
-    // Sempre retornar 200 para o Pagar.me, mesmo em caso de erro
-    // O Pagar.me tentará reenviar o webhook se receber erro
+    // Sempre retornar 200 para o AbacatePay, mesmo em caso de erro
+    // O AbacatePay tentará reenviar o webhook se receber erro
     res.status(200).json({
       success: false,
       error: 'Erro interno ao processar webhook',
@@ -231,19 +231,87 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /payments/:id/confirm
+ * Endpoint para confirmar manualmente um pagamento (útil para desenvolvimento/testes)
+ * ATENÇÃO: Em produção, isso deve ser feito apenas via webhook do AbacatePay
+ */
+router.post('/:id/confirm', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID do pagamento é obrigatório'
+      });
+    }
+
+    // Apenas permitir em desenvolvimento
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        success: false,
+        error: 'Operação não permitida em produção',
+        message: 'Use webhooks do AbacatePay para confirmar pagamentos em produção'
+      });
+    }
+
+    const payment = await paymentService.getPaymentStatus(id);
+    
+    if (payment.payment.status === PaymentStatus.PAID) {
+      return res.status(200).json({
+        success: true,
+        message: 'Pagamento já está confirmado',
+        payment: payment.payment
+      });
+    }
+
+    // Atualizar status para pago manualmente
+    const updatedPayment = await paymentService.updatePaymentStatusManually(id, PaymentStatus.PAID);
+
+    console.log(`⚠️ Pagamento ${id} confirmado manualmente (apenas para desenvolvimento)`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Pagamento confirmado manualmente',
+      payment: updatedPayment,
+      warning: 'Esta é uma confirmação manual. Em produção, use webhooks.'
+    });
+
+  } catch (error) {
+    console.error('Erro ao confirmar pagamento manualmente:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
+    
+    if (errorMessage.includes('não encontrado')) {
+      return res.status(404).json({
+        success: false,
+        error: 'Pagamento não encontrado',
+        message: errorMessage
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Falha ao confirmar pagamento',
+      message: errorMessage
+    });
+  }
+});
+
+/**
  * GET /payments/health
  * Verifica saúde do serviço de pagamento
  */
 router.get('/health', (req: Request, res: Response) => {
-  const isConfigured = paymentService.isPagarmeConfigured();
+  const isConfigured = paymentService.isAbacatePayConfigured();
   
   res.status(200).json({
     success: true,
     service: 'Payment Service',
     status: isConfigured ? 'configured' : 'not_configured',
-    pagarme: {
+    abacatePay: {
       configured: isConfigured,
-      environment: process.env.PAGARME_ENVIRONMENT || 'not_set'
+      apiKeySet: !!process.env.ABACATEPAY_API_KEY
     },
     timestamp: new Date().toISOString()
   });

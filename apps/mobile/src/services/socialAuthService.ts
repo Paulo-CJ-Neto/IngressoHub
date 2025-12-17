@@ -2,8 +2,8 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import api from './api';
-import { OAUTH_CONFIG, AUTH_URLS, TOKEN_URLS, USER_INFO_URLS } from '../config/oauth';
-import { OAUTH_CONFIG_DEV } from '../config/oauth.dev';
+import { OAUTH_CONFIG, AUTH_URLS, TOKEN_URLS, USER_INFO_URLS } from '@/config/oauth';
+import { OAUTH_CONFIG_DEV } from '@/config/oauth.dev';
 
 // Configurar WebBrowser para autenticação
 WebBrowser.maybeCompleteAuthSession();

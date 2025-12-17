@@ -4,6 +4,8 @@ export { usersService } from './usersService';
 export { default as api } from './api';
 export { authService } from './authService';
 export { SocialAuthService } from './socialAuthService';
+export { uploadService } from './uploadService';
+export { paymentService } from './paymentService';
 
 // Re-export interfaces for convenience
 export type { EventsService } from './eventsService';

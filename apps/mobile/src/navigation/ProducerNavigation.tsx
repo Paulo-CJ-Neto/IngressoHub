@@ -1,27 +1,27 @@
 import React from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import Home from '@/screens/Home';
-import EventDetails from '@/screens/EventDetails';
-import Profile from '@/screens/Profile';
-import Contact from '@/screens/Contact';
+import { Home } from '@/screens/event';
+import { EventDetails } from '@/screens/event';
+import { Profile } from '@/screens/profile';
+import { Contact } from '@/screens/profile';
+import { Purchase } from '@/screens/payment';
 
-// Telas específicas para produtores (serão criadas depois)
-import ProducerDashboard from '@/screens/ProducerDashboard';
-import ManageEvents from '@/screens/ManageEvents';
-import CreateEvent from '@/screens/CreateEvent';
-import EventAnalytics from '@/screens/EventAnalytics';
+import { CreateEvent } from '@/screens/event';
+import { ProducerValidateTicket } from '@/screens/ticket';
+import { ProducerMyEvents } from '@/screens/producer';
+import { EditEvent } from '@/screens/event';
 
 export type ProducerDrawerParamList = {
   HomeStack: undefined;
-  ProducerDashboard: undefined;
-  ManageEvents: undefined;
+  ProducerValidateTicket: undefined;
   CreateEvent: undefined;
-  EventAnalytics: undefined;
+  MyEventsStack: undefined;
   Profile: undefined;
   Contact: undefined;
+  Purchase: undefined;
 };
 
 const Drawer = createDrawerNavigator<ProducerDrawerParamList>();
@@ -34,14 +34,144 @@ function HomeStackNavigator() {
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: '#F8FAFC' },
-        gestureEnabled: false,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        transitionSpec: {
+          open: {
+            animation: 'spring',
+            config: {
+              stiffness: 1000,
+              damping: 500,
+              mass: 3,
+              overshootClamping: false,
+              restDisplacementThreshold: 0.01,
+              restSpeedThreshold: 0.01,
+            },
+          },
+          close: {
+            animation: 'spring',
+            config: {
+              stiffness: 1000,
+              damping: 500,
+              mass: 3,
+              overshootClamping: false,
+              restDisplacementThreshold: 0.01,
+              restSpeedThreshold: 0.01,
+            },
+          },
+        },
       }}
     >
       <Stack.Screen name="Home" component={Home} />
+      <Stack.Screen
+        name="EventDetails"
+        component={EventDetails}
+        options={{ 
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.width, 0],
+                    }),
+                  },
+                ],
+              },
+            };
+          },
+        }}
+      />
+      <Stack.Screen
+        name="Purchase"
+        component={Purchase}
+        options={{ 
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.width, 0],
+                    }),
+                  },
+                ],
+              },
+            };
+          },
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function MyEventsStackNavigator() {
+  return (
+    <Stack.Navigator
+      initialRouteName="ProducerMyEvents"
+      screenOptions={{ 
+        headerShown: false, 
+        cardStyle: { backgroundColor: '#F8FAFC' }, 
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        transitionSpec: {
+          open: {
+            animation: 'spring',
+            config: {
+              stiffness: 1000,
+              damping: 500,
+              mass: 3,
+              overshootClamping: false,
+              restDisplacementThreshold: 0.01,
+              restSpeedThreshold: 0.01,
+            },
+          },
+          close: {
+            animation: 'spring',
+            config: {
+              stiffness: 1000,
+              damping: 500,
+              mass: 3,
+              overshootClamping: false,
+              restDisplacementThreshold: 0.01,
+              restSpeedThreshold: 0.01,
+            },
+          },
+        },
+      }}
+    >
+      {/* @ts-ignore */}
+      <Stack.Screen name="ProducerMyEvents" component={ProducerMyEvents} />
+      {/* @ts-ignore */}
       <Stack.Screen 
-        name="EventDetails" 
-        component={EventDetails} 
-        options={{ gestureEnabled: false }}
+        name="EditEvent" 
+        component={EditEvent}
+        options={{
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.width, 0],
+                    }),
+                  },
+                ],
+              },
+            };
+          },
+        }}
       />
     </Stack.Navigator>
   );
@@ -50,58 +180,58 @@ function HomeStackNavigator() {
 export default function ProducerNavigation() {
   return (
     <Drawer.Navigator
-      initialRouteName="ProducerDashboard"
+      initialRouteName="HomeStack"
       screenOptions={{
         headerShown: false,
       }}
     >
-      <Drawer.Screen 
-        name="ProducerDashboard" 
-        component={ProducerDashboard} 
-        options={{ 
-          title: 'Dashboard',
-          drawerIcon: ({ color, size }) => (<Ionicons name="grid-outline" color={color} size={size} />),
-        }} 
+      <Drawer.Screen
+        name="HomeStack"
+        component={HomeStackNavigator}
+        options={{
+          title: 'Início',
+          drawerIcon: ({ color, size }) => (<Ionicons name="home-outline" color={color} size={size} />),
+        }}
       />
-      <Drawer.Screen 
-        name="ManageEvents" 
-        component={ManageEvents} 
-        options={{ 
-          title: 'Gerenciar Eventos',
-          drawerIcon: ({ color, size }) => (<Ionicons name="calendar-outline" color={color} size={size} />),
-        }} 
+      <Drawer.Screen
+        name="MyEventsStack"
+        component={MyEventsStackNavigator}
+        options={{
+          title: 'Meus Eventos',
+          drawerIcon: ({ color, size }) => (<Ionicons name="albums-outline" color={color} size={size} />),
+        }}
       />
-      <Drawer.Screen 
-        name="CreateEvent" 
-        component={CreateEvent} 
-        options={{ 
+      <Drawer.Screen
+        name="ProducerValidateTicket"
+        component={ProducerValidateTicket}
+        options={{
+          title: 'Validar Ingresso',
+          drawerIcon: ({ color, size }) => (<Ionicons name="qr-code-outline" color={color} size={size} />),
+        }}
+      />
+      <Drawer.Screen
+        name="CreateEvent"
+        component={CreateEvent}
+        options={{
           title: 'Criar Evento',
           drawerIcon: ({ color, size }) => (<Ionicons name="add-circle-outline" color={color} size={size} />),
-        }} 
+        }}
       />
-      <Drawer.Screen 
-        name="EventAnalytics" 
-        component={EventAnalytics} 
-        options={{ 
-          title: 'Analytics',
-          drawerIcon: ({ color, size }) => (<Ionicons name="analytics-outline" color={color} size={size} />),
-        }} 
-      />
-      <Drawer.Screen 
-        name="Profile" 
-        component={Profile} 
-        options={{ 
+      <Drawer.Screen
+        name="Profile"
+        component={Profile}
+        options={{
           title: 'Perfil',
           drawerIcon: ({ color, size }) => (<Ionicons name="person-circle-outline" color={color} size={size} />),
-        }} 
+        }}
       />
-      <Drawer.Screen 
-        name="Contact" 
-        component={Contact} 
-        options={{ 
+      <Drawer.Screen
+        name="Contact"
+        component={Contact}
+        options={{
           title: 'Contato',
           drawerIcon: ({ color, size }) => (<Ionicons name="chatbubbles-outline" color={color} size={size} />),
-        }} 
+        }}
       />
     </Drawer.Navigator>
   );

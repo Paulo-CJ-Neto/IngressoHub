@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '@ingressohub/entities';
-import { authService } from '../services';
-import { SocialAuthService } from '../services/socialAuthService';
-import api from '../services/api';
+import { authService } from '@/services';
+import { SocialAuthService } from '@/services/socialAuthService';
+import api from '@/services/api';
 
 type AuthContextValue = {
   user: User | null;
@@ -29,21 +29,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem('auth:user');
         const token = await AsyncStorage.getItem('auth:token');
+        
         if (token) {
           try {
             const res = await api.get('/auth/me');
             const fresh = (res.data as { user: User }).user;
             setUser(fresh);
             await AsyncStorage.setItem('auth:user', JSON.stringify(fresh));
-          } catch {
+          } catch (error) {
+            // Token inválido ou erro de rede - limpar dados
+            console.log('Token inválido ou erro de rede, limpando dados de auth');
             await AsyncStorage.removeItem('auth:token');
             await AsyncStorage.removeItem('auth:user');
             setUser(null);
           }
         } else if (raw) {
-          const parsed = JSON.parse(raw) as User;
-          setUser(parsed);
+          // Usar dados salvos localmente se não houver token
+          try {
+            const parsed = JSON.parse(raw) as User;
+            setUser(parsed);
+          } catch (error) {
+            console.log('Erro ao parsear dados de usuário salvos');
+            await AsyncStorage.removeItem('auth:user');
+            setUser(null);
+          }
         }
+      } catch (error) {
+        console.log('Erro geral no carregamento de auth:', error);
+        setUser(null);
       } finally {
         setLoading(false);
       }

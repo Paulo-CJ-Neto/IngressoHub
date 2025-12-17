@@ -1,0 +1,110 @@
+## Diretrizes para a IA (Cursor) – IngressoHub
+
+### Objetivo
+- **Propósito**: Ajudar a IA a implementar funcionalidades com segurança e consistência no monorepo `IngressoHub`.
+- **Linguagem**: Responder em pt-BR, de forma objetiva. Usar Markdown apenas para trechos relevantes (código curto, listas, comandos). Citar arquivos com crase, por exemplo `apps/api/src/index.ts`.
+
+### Stack e Workspaces
+- **Monorepo (npm workspaces)**: `apps/api` (Node/Express/TS), `apps/mobile` (React Native/Expo/TS), `packages/entities` (tipos/entidades compartilhadas).
+- **TypeScript**: 5.8.x, `strict` em todos os pacotes.
+- **Node**: 18+. **Expo**: ~53. **React**: 19. **React Native**: 0.79.
+
+### Execução rápida
+- **API (dev)**: `npm run dev:api`
+- **Mobile (dev)**: `npm run dev:mobile`
+- **Build geral**: `npm run build`
+- **Build por pacote**: `npm run build:entities`, `npm run build:api`, `npm run build:mobile`
+- **Limpar builds**: `npm run clean`
+
+### Estrutura principal
+- `apps/api/src` – servidor Express, rotas em `src/routes`, serviços em `src/services`, DynamoDB em `src/db`.
+- `apps/mobile/src` – componentes, telas e serviços (Axios) com alias `@/*` → `src/*`.
+- `packages/entities/src` – `Event`, `Ticket`, `User` compartilhados.
+
+### TypeScript & Path Aliases
+- Raiz `tsconfig.json` define `@ingressohub/entities` → `packages/entities/src`.
+- API (`apps/api/tsconfig.json`): `@ingressohub/entities` → `../../packages/entities/dist` (exige build antes de rodar a API).
+- Mobile (`apps/mobile/tsconfig.json`): `@ingressohub/entities` → `../../packages/entities/src` (tipos direto do source em dev).
+- **Regra**: ao alterar entidades, atualizar `packages/entities/src/*`, rodar `npm run build:entities` e só então ajustar API/Mobile se necessário.
+
+### Convenções de código
+- **Estilo**: priorizar legibilidade. Nomes descritivos (sem abreviações), funções como verbos, variáveis como substantivos.
+- **Controle de fluxo**: early returns; evitar nesting profundo (>2-3 níveis); tratar erros e edges primeiro; não capturar exceções sem handling útil.
+- **Comentários**: explicar “por quê”, evitar comentários triviais e inline extensos.
+- **Formatação**: não reformate código não relacionado. Preserve indentação existente. Quebre linhas longas.
+- **Tipos**: evitar `any` e casts inseguros.
+
+### API Backend (Express + DynamoDB)
+- Entrypoint: `apps/api/src/index.ts`. Prefixo global de rotas em `apps/api/src/routes/index.ts` com `'/api'`.
+- Rotas: `events`, `tickets`, `users`, `auth`, `payments` em `apps/api/src/routes`.
+- **Padrão para novas rotas**:
+  1) Criar arquivo em `apps/api/src/routes/<nome>.ts`.
+  2) Registrar em `apps/api/src/routes/index.ts` usando `API_PREFIX`.
+  3) Regra de negócio em `apps/api/src/services/*`.
+  4) Acesso ao DynamoDB em `apps/api/src/db/repositories/*`.
+- **DynamoDB (AWS SDK v3)**: usar comandos tipados, validar entradas, tratar condições/conflitos.
+- **Erros**: usar middleware de erro existente; mensagens detalhadas apenas em `development`.
+- **Segurança**: `helmet`, `cors`; nunca expor segredos em logs.
+
+### Integração de Email
+- Serviço: `apps/api/src/services/EmailService.ts` com `nodemailer`.
+- Config: `apps/api/src/config/email.ts` e docs `apps/api/EMAIL_SETUP.md`.
+- **Provedores**: Gmail (dev) e SendGrid (prod). Respeitar `NODE_ENV` e variáveis.
+- **Tokens**: expiração de 24h; não logar tokens; link de verificação usa `EMAIL_CONFIG.FRONTEND_URL`.
+
+### Integração de Pagamentos PIX (Pagar.me)
+- Docs: `apps/api/PAYMENTS_README.md` e `PAYMENTS_INTEGRATION_SUMMARY.md`.
+- Endpoints sob `'/api/payments'`; webhook validado via secret; HTTPS obrigatório em produção.
+- Tabela `Payments` no DynamoDB criada via script; manter status e auditoria consistentes.
+
+### Mobile (Expo)
+- Config de dev: `apps/mobile/src/config/development.ts` define `API_BASE_URL`, timeout e logs.
+- **IP local**: usar IP acessível na LAN. Evitar commitar IPs pessoais hardcoded; preferir arquivo de config.
+- **Axios**: centralizar em `apps/mobile/src/services/*` e reaproveitar base-config.
+- Seguir padrões de navegação e estado usados nas telas em `apps/mobile/src/screens/*`.
+
+### Variáveis de ambiente e segredos
+- Nunca commitar credenciais. Usar `.env` em `apps/api` para AWS, DynamoDB, Pagar.me, Email.
+- Variáveis: `AWS_*`, `EVENTS_TABLE_NAME`, `TICKETS_TABLE_NAME`, `USERS_TABLE_NAME`, `PAYMENTS_TABLE_NAME`, `PAGARME_*`, `EMAIL_*`, `FRONTEND_URL`, `MOBILE_APP_URL`, `NODE_ENV`, `PORT`.
+
+### Processo recomendado para a IA
+- Explorar antes de editar: localizar pontos relevantes (rotas, serviços, repositórios) e abrir arquivos alvo.
+- Mudanças mínimas e focadas: alterar só o necessário, sem reformatar não relacionado.
+- Manter contratos: respeitar tipos de `packages/entities` e respostas dos endpoints. Se mudar tipos, rodar `npm run build:entities` e ajustar consumidores.
+- Build/check: após mudanças na API, `npm run build:api`; em entidades, `npm run build:entities` e re-testar API/Mobile.
+- Lints/types: garantir ausência de erros; corrigir imediatamente se introduzidos.
+- Testes/execução: usar scripts existentes (ex.: `apps/api/src/scripts/test-integration.ts`, `apps/api/src/scripts/test-payments.ts`, `apps/mobile/test-mobile.js`).
+- Documentação: ao criar/alterar variáveis ou endpoints, atualizar os READMEs relacionados.
+
+### Padrões de commits/PRs
+- Mensagens no imperativo e objetivas (ex.: "Add payment status polling to mobile").
+- Descrever impacto e áreas afetadas; vincular issues quando houver.
+
+### Evitar
+- Gerar blobs binários ou hashes gigantes.
+- Escrever em `dist` (sempre editar `src` e gerar build).
+- Introduzir dependências sem justificativa clara.
+- Expor segredos em logs, exemplos ou testes.
+
+### Checklists rápidos
+- **Nova rota (API)**: rota + serviço + repositório (se necessário) + registro em `routes/index.ts` + validação + tratamento de erro + docs.
+- **Novo tipo compartilhado**: editar `packages/entities/src/*` + `npm run build:entities` + ajustar API/Mobile.
+- **Nova chamada no Mobile**: serviço Axios + uso na tela + estados de carregamento/erro + configs de ambiente.
+
+### Comandos úteis (referência)
+- `npm run dev:api` – iniciar API (porta 3000, `/health`).
+- `npm run dev:mobile` – iniciar Metro bundler (Expo).
+- `npm run db:create-payments-table` – criar tabela `Payments` (API).
+- `npm run test:payments` – testar integração de pagamentos (API).
+- `npm run test:integration` – testes de integração (conforme scripts).
+
+### Documentação local
+- `README.md` (raiz) – visão geral.
+- `apps/api/README.md` – API: rotas, setup.
+- `apps/api/EMAIL_SETUP.md` – email.
+- `apps/api/PAYMENTS_README.md` e `PAYMENTS_INTEGRATION_SUMMARY.md` – pagamentos.
+- `INTEGRATION_SUMMARY.md` – integração API ↔ Mobile.
+
+### Observações finais
+- Preferir soluções simples e robustas. Otimizar quando houver evidência de necessidade.
+- Em dúvida sobre regras de negócio, conferir serviços e repositórios existentes antes de criar novos padrões.

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { TicketRepository } from '../db/repositories/TicketRepository';
 import { EventRepository } from '../db/repositories/EventRepository';
 import { Ticket } from '@ingressohub/entities';
-import { TicketService } from '../services/TicketService';
+import { TicketIssueService } from '../services';
 
 const router = Router();
 
@@ -99,24 +99,38 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/tickets - Criar novo ticket (JWT + QRCode)
-router.post('/', async (req: Request, res: Response) => {
+// POST /api/tickets - Desativado (usar /api/tickets/simple)
+router.post('/', async (_req: Request, res: Response) => {
+  return res.status(410).json({
+    error: 'Endpoint desativado. Use /api/tickets/simple para criar tickets com QR JSON { ticket_id, event_id }.'
+  });
+});
+
+// POST /api/tickets/simple - Criar ticket com QR no formato JSON { ticket_id, event_id }
+router.post('/simple', async (req: Request, res: Response) => {
   try {
-    const { eventId, userId } = req.body as { eventId?: string; userId?: string };
-    if (!eventId || !userId) {
-      return res.status(400).json({ error: 'eventId e userId são obrigatórios' });
+    const { eventId, buyer, quantity, totalPrice } = req.body as {
+      eventId?: string;
+      buyer?: { name?: string; cpf?: string; email?: string };
+      quantity?: number;
+      totalPrice?: number;
+    };
+    if (!eventId) {
+      return res.status(400).json({ error: 'eventId é obrigatório' });
     }
 
-    const result = await TicketService.createTicket({ eventId, userId });
-    res.status(201).json(result);
+    const result = await TicketIssueService.createTicketWithQrJson({
+      eventId,
+      buyer,
+      quantity,
+      totalPrice,
+    });
+    return res.status(201).json(result);
   } catch (error: any) {
-    if (error?.message?.includes('não configurada') || error?.message?.includes('Chave privada')) {
-      return res.status(500).json({ error: 'Falha na configuração da assinatura do JWT' });
-    }
     if (error?.message?.includes('Evento não encontrado')) {
       return res.status(404).json({ error: 'Evento não encontrado' });
     }
-    res.status(500).json({ error: 'Falha na criação do ticket' });
+    return res.status(500).json({ error: error?.message || 'Falha na criação do ticket (simple)' });
   }
 });
 

@@ -4,7 +4,7 @@ export const DEV_CONFIG = {
   ENABLE_LOGS: true,
   
   // URL da API para desenvolvimento
-  API_BASE_URL: `http://192.168.1.101:3000/api`,
+  API_BASE_URL: `http://192.168.1.200:3000/api`,
   
   // Timeout reduzido para desenvolvimento
   API_TIMEOUT: 5000,

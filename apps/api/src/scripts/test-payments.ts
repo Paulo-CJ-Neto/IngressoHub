@@ -19,13 +19,13 @@ async function testPayments() {
     console.log('2️⃣ Testando serviço de pagamento...');
     const paymentService = new PaymentService();
     
-    // Verificar configuração do Pagar.me
-    const isConfigured = paymentService.isPagarmeConfigured();
-    console.log(`   Pagar.me configurado: ${isConfigured ? '✅ Sim' : '❌ Não'}`);
+    // Verificar configuração do AbacatePay
+    const isConfigured = paymentService.isAbacatePayConfigured();
+    console.log(`   AbacatePay configurado: ${isConfigured ? '✅ Sim' : '❌ Não'}`);
     
     if (!isConfigured) {
-      console.log('   ⚠️  Configure as variáveis do Pagar.me para testes completos');
-      console.log('   📝 Adicione ao .env: PAGARME_API_KEY, PAGARME_ENCRYPTION_KEY, PAGARME_WEBHOOK_SECRET');
+      console.log('   ⚠️  Configure as variáveis do AbacatePay para testes completos');
+      console.log('   📝 Adicione ao .env: ABACATEPAY_API_KEY');
     }
 
     // Testar criação de pagamento (simulado)
@@ -67,10 +67,10 @@ async function testPayments() {
         
       } catch (error) {
         console.log('   ❌ Erro ao criar pagamento real:', error instanceof Error ? error.message : 'Erro desconhecido');
-        console.log('   💡 Verifique as credenciais do Pagar.me');
+        console.log('   💡 Verifique as credenciais do AbacatePay');
       }
     } else {
-      console.log('   ⏭️  Pulando teste real (Pagar.me não configurado)');
+      console.log('   ⏭️  Pulando teste real (AbacatePay não configurado)');
     }
 
     // Testar validações
@@ -111,12 +111,12 @@ async function testPayments() {
       console.log('   1. Use o endpoint POST /api/payments/pix');
       console.log('   2. Exiba o QR Code (pixQrCodeBase64)');
       console.log('   3. Use o endpoint GET /api/payments/:id/status para verificar');
-      console.log('   4. Configure o webhook no Pagar.me para /api/payments/webhook');
+      console.log('   4. Configure o webhook no AbacatePay para /api/payments/webhook');
     } else {
-      console.log('\n⚙️  Para configurar o Pagar.me:');
-      console.log('   1. Crie uma conta em https://sandbox.pagar.me/');
-      console.log('   2. Obtenha suas credenciais de sandbox');
-      console.log('   3. Adicione ao arquivo .env');
+      console.log('\n⚙️  Para configurar o AbacatePay:');
+      console.log('   1. Crie uma conta no AbacatePay');
+      console.log('   2. Obtenha sua API Key');
+      console.log('   3. Adicione ABACATEPAY_API_KEY ao arquivo .env');
       console.log('   4. Execute este teste novamente');
     }
 

@@ -6,7 +6,7 @@
 
 const axios = require('axios');
 
-const API_BASE_URL = 'http://192.168.1.101:3000/api';
+const API_BASE_URL = 'http://192.168.1.102:3000/api';
 
 async function testMobileIntegration() {
   console.log('📱 Teste de Integração do Frontend Mobile');
@@ -15,7 +15,7 @@ async function testMobileIntegration() {
   try {
     // Teste 1: Health check
     console.log('1️⃣ Testando health check...');
-    const healthResponse = await axios.get('http://192.168.1.101:3000/health');
+    const healthResponse = await axios.get('http://192.168.1.102:3000/health');
     console.log(`✅ Health check: ${healthResponse.status} - ${healthResponse.data.message}`);
 
     // Teste 2: Buscar eventos ativos (tela Home)

@@ -3,16 +3,16 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import Home from '@/screens/Home';
-import EventDetails from '@/screens/EventDetails';
-import Profile from '@/screens/Profile';
-import Contact from '@/screens/Contact';
+import { Home } from '@/screens/event';
+import { EventDetails } from '@/screens/event';
+import { Profile } from '@/screens/profile';
+import { Contact } from '@/screens/profile';
 
 // Telas específicas para administradores (serão criadas depois)
-import AdminDashboard from '@/screens/AdminDashboard';
-import UserManagement from '@/screens/UserManagement';
-import SystemAnalytics from '@/screens/SystemAnalytics';
-import EventModeration from '@/screens/EventModeration';
+import { AdminDashboard } from '@/screens/admin';
+import { UserManagement } from '@/screens/admin';
+import { SystemAnalytics } from '@/screens/admin';
+import { EventModeration } from '@/screens/admin';
 
 export type AdminDrawerParamList = {
   HomeStack: undefined;
@@ -35,6 +35,44 @@ function HomeStackNavigator() {
         headerShown: false,
         cardStyle: { backgroundColor: '#F8FAFC' },
         gestureEnabled: false,
+        cardStyleInterpolator: ({ current, layouts }) => {
+          return {
+            cardStyle: {
+              transform: [
+                {
+                  translateX: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [layouts.screen.width, 0],
+                  }),
+                },
+              ],
+            },
+          };
+        },
+        transitionSpec: {
+          open: {
+            animation: 'spring',
+            config: {
+              stiffness: 1000,
+              damping: 500,
+              mass: 3,
+              overshootClamping: false,
+              restDisplacementThreshold: 0.01,
+              restSpeedThreshold: 0.01,
+            },
+          },
+          close: {
+            animation: 'spring',
+            config: {
+              stiffness: 1000,
+              damping: 500,
+              mass: 3,
+              overshootClamping: false,
+              restDisplacementThreshold: 0.01,
+              restSpeedThreshold: 0.01,
+            },
+          },
+        },
       }}
     >
       <Stack.Screen name="Home" component={Home} />

@@ -16,7 +16,8 @@
     "build:api": "cd apps/api && npm run build",
     "build:entities": "cd packages/entities && npm run build",
     "clean": "npm run clean --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "test:coverage": "npm run test:coverage --workspaces"
   },
   "devDependencies": {
     "typescript": "~5.8.3"

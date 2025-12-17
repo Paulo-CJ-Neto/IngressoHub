@@ -31,13 +31,13 @@ export function validateEnvironment() {
     throw new Error(`Variáveis de ambiente obrigatórias não encontradas: ${missingVars.join(', ')}`);
   }
 
-  // Validar variáveis do Pagar.me se estivermos em produção
+  // Validar variáveis do AbacatePay se estivermos em produção
   if (process.env.NODE_ENV === 'production') {
-    const pagarmeVars = ['PAGARME_API_KEY', 'PAGARME_ENCRYPTION_KEY', 'PAGARME_WEBHOOK_SECRET'];
-    const missingPagarmeVars = pagarmeVars.filter(varName => !process.env[varName]);
+    const abacatePayVars = ['ABACATEPAY_API_KEY'];
+    const missingAbacatePayVars = abacatePayVars.filter(varName => !process.env[varName]);
     
-    if (missingPagarmeVars.length > 0) {
-      throw new Error(`Variáveis do Pagar.me obrigatórias não encontradas: ${missingPagarmeVars.join(', ')}`);
+    if (missingAbacatePayVars.length > 0) {
+      console.warn(`Variáveis do AbacatePay não encontradas: ${missingAbacatePayVars.join(', ')}. Pagamentos PIX não funcionarão.`);
     }
   }
 }

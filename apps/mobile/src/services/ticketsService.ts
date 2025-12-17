@@ -31,6 +31,13 @@ export interface TicketsService {
   
   // Validar ticket
   validateTicket(id: string): Promise<Ticket>;
+
+  // Validar ticket via QR: ticket_id + event_id
+  validateTicketByIds(payload: { ticket_id: string; event_id: string }): Promise<
+    { status: 'valid'; validatedAt: string } |
+    { status: 'already_used'; usedAt: string } |
+    { status: 'invalid' }
+  >;
   
   // Cancelar ticket
   cancelTicket(id: string): Promise<Ticket>;
@@ -40,6 +47,14 @@ export interface TicketsService {
   
   // Deletar ticket
   deleteTicket(id: string): Promise<void>;
+
+  // Criar ticket simples com QR JSON { ticket_id, event_id }
+  createTicketSimple(input: {
+    eventId: string;
+    buyer?: { name?: string; cpf?: string; email?: string };
+    quantity?: number;
+    totalPrice?: number;
+  }): Promise<{ ticket: Ticket; qrPayload: string; qrCodeBase64: string }>;
 }
 
 class TicketsServiceImpl implements TicketsService {
@@ -143,6 +158,20 @@ class TicketsServiceImpl implements TicketsService {
     }
   }
 
+  async validateTicketByIds(payload: { ticket_id: string; event_id: string }): Promise<
+    { status: 'valid'; validatedAt: string } |
+    { status: 'already_used'; usedAt: string } |
+    { status: 'invalid' }
+  > {
+    try {
+      const response = await api.post('/validate-ticket', payload);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao validar ticket via ids:', error);
+      throw error;
+    }
+  }
+
   async cancelTicket(id: string): Promise<Ticket> {
     try {
       const response = await api.patch(`/tickets/${id}/cancel`);
@@ -168,6 +197,21 @@ class TicketsServiceImpl implements TicketsService {
       await api.delete(`/tickets/${id}`);
     } catch (error) {
       console.error(`Erro ao deletar ticket ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async createTicketSimple(input: {
+    eventId: string;
+    buyer?: { name?: string; cpf?: string; email?: string };
+    quantity?: number;
+    totalPrice?: number;
+  }): Promise<{ ticket: Ticket; qrPayload: string; qrCodeBase64: string }> {
+    try {
+      const response = await api.post('/tickets/simple', input);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao criar ticket simples:', error);
       throw error;
     }
   }

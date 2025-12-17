@@ -19,7 +19,8 @@ export async function userExamples() {
       email: `usuario${Date.now()}@exemplo.com`,
       full_name: 'Ana Paula Santos',
       avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      user_type: 'client' as const
     };
 
     const createdUser = await UserRepository.createOrUpdate(user);
@@ -67,6 +68,7 @@ export async function ticketExamples() {
       name: 'Show de Teste para Ingressos',
       date: new Date('2024-12-30T20:00:00').toISOString(),
       location: 'Arena de Teste',
+      producer_id: 'producer_example',
       price: 100.00,
       max_tickets: 500,
       sold_tickets: 0,
@@ -152,6 +154,7 @@ export async function integrationExamples() {
       name: 'Festival de Integração',
       date: new Date('2024-12-31T22:00:00').toISOString(),
       location: 'Parque de Integração',
+      producer_id: 'producer_example',
       price: 150.00,
       max_tickets: 1000,
       sold_tickets: 0,

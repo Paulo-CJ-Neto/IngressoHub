@@ -22,11 +22,13 @@ routes/
 | `GET` | `/api/events` | Listar todos os eventos | - |
 | `GET` | `/api/events/active` | Listar eventos ativos | - |
 | `GET` | `/api/events/:id` | Buscar evento por ID | `id` |
-| `POST` | `/api/events` | Criar novo evento | Body: Event data |
+| `POST` | `/api/events` | Criar novo evento (com upload de imagens) | Body: Event data + FormData |
+| `POST` | `/api/events/:id/images` | Adicionar imagens a evento existente | `id`, FormData: images |
+| `DELETE` | `/api/events/:id/images` | Remover imagem de evento | `id`, Body: `{imageUrl}` |
 | `PUT` | `/api/events/:id` | Atualizar evento completo | `id`, Body: Event data |
 | `PATCH` | `/api/events/:id` | Atualizar evento parcialmente | `id`, Body: Updates |
 | `PATCH` | `/api/events/:id/sold-tickets` | Incrementar ingressos vendidos | `id`, Body: `{quantity}` |
-| `DELETE` | `/api/events/:id` | Deletar evento | `id` |
+| `DELETE` | `/api/events/:id` | Deletar evento (remove imagens do S3) | `id` |
 
 **Dados obrigatórios para criar evento:**
 ```json
@@ -34,9 +36,17 @@ routes/
   "name": "Nome do Evento",
   "date": "2024-12-25T20:00:00.000Z",
   "location": "Local do Evento",
-  "price": 150.00
+  "price": 150.00,
+  "producer_id": "producer_123"
 }
 ```
+
+**Upload de imagens:**
+- Use `FormData` para enviar imagens junto com os dados do evento
+- Campo `images` para múltiplas imagens (máximo 5)
+- Tipos permitidos: JPEG, JPG, PNG, WebP
+- Tamanho máximo: 5MB por arquivo
+- Imagens são salvas automaticamente no S3
 
 ### 🎟️ Ingressos (`/api/tickets`)
 

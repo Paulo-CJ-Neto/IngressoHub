@@ -22,6 +22,7 @@ export async function createEventExample() {
     name: 'Show de Rock',
     date: new Date('2024-12-25T20:00:00').toISOString(),
     location: 'Arena Show',
+    producer_id: 'producer_example',
     price: 150.00,
     max_tickets: 1000,
     sold_tickets: 0,
@@ -208,7 +209,8 @@ export async function createUserExample() {
     email: `usuario${Date.now()}@exemplo.com`,
     full_name: 'João Silva',
     avatar_url: 'https://example.com/avatar.jpg',
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    user_type: 'client' as const
   };
 
   try {
